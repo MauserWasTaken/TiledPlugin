@@ -29,6 +29,21 @@ export class WallVariantGenerator {
                     y,
                     variant
                 );
+
+                if(
+                    variant === WallTile.TOP_LEFT ||
+                    variant === WallTile.TOP_RIGHT ||
+                    variant === WallTile.BOTTOM_LEFT ||
+                    variant === WallTile.BOTTOM_RIGHT
+                )
+                {
+                    tiled.log(
+                        "CORNER FOUND",
+                        x,
+                        y,
+                        variant
+                    );
+                }
             }
         }
     }
@@ -37,54 +52,66 @@ export class WallVariantGenerator {
 
     calculateVariant(grid,x,y)
     {
-
         let up =
-            grid.isWall(x,y-1);
+            grid.isFloor(x,y-1);
 
         let down =
-            grid.isWall(x,y+1);
+            grid.isFloor(x,y+1);
 
         let left =
-            grid.isWall(x-1,y);
+            grid.isFloor(x-1,y);
 
         let right =
-            grid.isWall(x+1,y);
+            grid.isFloor(x+1,y);
+
+
+        let upLeft =
+            grid.isFloor(x-1,y-1);
+
+        let upRight =
+            grid.isFloor(x+1,y-1);
+
+        let downLeft =
+            grid.isFloor(x-1,y+1);
+
+        let downRight =
+            grid.isFloor(x+1,y+1);
 
 
 
-        if(!down && !left)
-            return WallTile.BOTTOM_RIGHT;
-
-
-        if(!down && !right)
-            return WallTile.BOTTOM_LEFT;
-
-
-        if(!down)
-            return WallTile.BOTTOM;
-
-
-
-        if(!up && !left)
-            return WallTile.TOP_RIGHT;
-
-
-        if(!up && !right)
+        // corners
+        if(downRight && !down && !right)
             return WallTile.TOP_LEFT;
 
 
-        if(!up)
+        if(downLeft && !down && !left)
+            return WallTile.TOP_RIGHT;
+
+
+        if(upRight && !up && !right)
+            return WallTile.BOTTOM_RIGHT;
+
+
+        if(upLeft && !up && !left)
+            return WallTile.BOTTOM_LEFT;
+
+
+
+        // straight walls
+        if(down)
             return WallTile.TOP;
 
 
+        if(up)
+            return WallTile.BOTTOM;
 
-        if(!left)
-            return WallTile.RIGHT;
 
-
-        if(!right)
+        if(right)
             return WallTile.LEFT;
 
+
+        if(left)
+            return WallTile.RIGHT;
 
 
         return WallTile.INSIDE;

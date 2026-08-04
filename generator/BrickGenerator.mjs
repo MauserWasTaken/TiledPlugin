@@ -42,38 +42,6 @@ export class BrickGenerator {
 
                         break;
 
-
-
-                    case WallTile.TOP_LEFT:
-
-                        grid.setWall(
-                            x,
-                            y+1
-                        );
-
-                        grid.setWallVariant(
-                            x,
-                            y+1,
-                            WallTile.BRICK_RIGHT
-                        );
-
-                        break;
-
-
-                    case WallTile.TOP_RIGHT:
-
-                        grid.setWall(
-                            x,
-                            y+1
-                        );
-
-                        grid.setWallVariant(
-                            x,
-                            y+1,
-                            WallTile.BRICK_LEFT
-                        );
-
-                        break;
                 }
             }
         }

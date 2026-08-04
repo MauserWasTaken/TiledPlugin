@@ -3,6 +3,8 @@ import { TileWriter } from "../generator/TileWriter.mjs";
 import { Grid } from "../generator/Grid.mjs";
 import { WallVariantGenerator } from "../generator/WallVariantGenerator.mjs";
 import { BrickGenerator } from "../generator/BrickGenerator.mjs";
+import {RoomWallBuilder} from "../generator/RoomWallBuilder.mjs";
+import {WallTile} from "../generator/WallTile.mjs";
 
 
 export function generateDungeon()
@@ -57,6 +59,10 @@ export function generateDungeon()
 
     roomGenerator.carveRoom(room);
 
+    let wallBuilder =
+        new RoomWallBuilder();
+
+    wallBuilder.generate(grid);
 
     let wallGenerator =
         new WallVariantGenerator();
@@ -65,6 +71,21 @@ export function generateDungeon()
     wallGenerator.generate(
         grid
     );
+
+    for(let y=8;y<23;y++)
+    {
+        let row="";
+
+        for(let x=8;x<28;x++)
+        {
+            if(grid.isFloor(x,y))
+                row += "F";
+            else
+                row += "W";
+        }
+
+        tiled.log(row);
+    }
 
 
 

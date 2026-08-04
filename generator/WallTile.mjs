@@ -4,17 +4,16 @@ export const WallTile = {
 
     INSIDE: 0,
 
-    TOP: 26,
-    BOTTOM: 2,
+    TOP: 2,
+    BOTTOM: 26,
 
     LEFT: 13,
     RIGHT: 15,
 
-    TOP_LEFT: 5,
-    TOP_RIGHT: 4,
-
-    BOTTOM_LEFT: 17,
-    BOTTOM_RIGHT: 16,
+    TOP_LEFT:1,
+    TOP_RIGHT:3,
+    BOTTOM_LEFT:27,
+    BOTTOM_RIGHT:25,
 
     BRICK: 14,
     BRICK_LEFT:57,
