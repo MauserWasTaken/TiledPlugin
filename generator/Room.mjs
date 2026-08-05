@@ -55,4 +55,57 @@ export class Room {
         return this.y + this.height - 1;
     }
 
+    wallPointTowards(other)
+    {
+        const dx =
+            other.centerX - this.centerX;
+
+        const dy =
+            other.centerY - this.centerY;
+
+
+        if(Math.abs(dx) > Math.abs(dy))
+        {
+            if(dx > 0)
+            {
+                return [
+                    this.right,
+                    Math.floor(
+                        this.centerY
+                    )
+                ];
+            }
+            else
+            {
+                return [
+                    this.left,
+                    Math.floor(
+                        this.centerY
+                    )
+                ];
+            }
+        }
+        else
+        {
+            if(dy > 0)
+            {
+                return [
+                    Math.floor(
+                        this.centerX
+                    ),
+                    this.top
+                ];
+            }
+            else
+            {
+                return [
+                    Math.floor(
+                        this.centerX
+                    ),
+                    this.bottom
+                ];
+            }
+        }
+    }
+
 }

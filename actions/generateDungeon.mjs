@@ -56,6 +56,12 @@ export function generateDungeon()
         roomGenerator.carveRoom(room);
     }
 
+    // NEW
+    bsp.connectRooms(
+        result.root,
+        grid
+    );
+
     let wallBuilder =
         new RoomWallBuilder();
 

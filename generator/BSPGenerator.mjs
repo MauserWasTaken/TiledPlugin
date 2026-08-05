@@ -1,5 +1,6 @@
 import { BSPNode } from "./BSPNode.mjs";
 import { Room } from "./Room.mjs";
+import {CorridorGenerator} from "./CorridorGenerator.mjs";
 
 export class BSPGenerator
 {
@@ -245,5 +246,103 @@ export class BSPGenerator
         return Math.random() *
             (max - min) +
             min;
+    }
+
+    connectRooms(node,grid)
+    {
+
+        if(node.isLeaf())
+            return;
+
+
+
+        if(node.left && node.right)
+        {
+
+            this.connectRooms(
+                node.left,
+                grid
+            );
+
+
+            this.connectRooms(
+                node.right,
+                grid
+            );
+
+
+            const roomA =
+                this.findRandomRoom(
+                    node.left
+                );
+
+
+            const roomB =
+                this.findRandomRoom(
+                    node.right
+                );
+
+
+            if(roomA && roomB)
+            {
+
+                const corridor =
+                    new CorridorGenerator();
+
+
+                corridor.connect(
+                    grid,
+                    roomA,
+                    roomB,
+                    2
+                );
+            }
+        }
+    }
+
+    findRandomRoom(node)
+    {
+
+        let rooms=[];
+
+
+        this.collectRooms(
+            node,
+            rooms
+        );
+
+
+        if(rooms.length===0)
+            return null;
+
+
+        return rooms[
+            Math.floor(
+                Math.random()*rooms.length
+            )
+            ];
+    }
+
+
+
+    collectRooms(node,rooms)
+    {
+
+        if(node.room)
+            rooms.push(node.room);
+
+
+        if(node.left)
+            this.collectRooms(
+                node.left,
+                rooms
+            );
+
+
+        if(node.right)
+            this.collectRooms(
+                node.right,
+                rooms
+            );
     }
 }
