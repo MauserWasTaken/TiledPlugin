@@ -5,6 +5,7 @@ import { WallVariantGenerator } from "../generator/WallVariantGenerator.mjs";
 import { BrickGenerator } from "../generator/BrickGenerator.mjs";
 import {RoomWallBuilder} from "../generator/RoomWallBuilder.mjs";
 import {WallTile} from "../generator/WallTile.mjs";
+import {BSPGenerator} from "../generator/BSPGenerator.mjs";
 
 
 export function generateDungeon()
@@ -46,18 +47,14 @@ export function generateDungeon()
         );
 
 
-    let room =
-        {
-            id:0,
-            x:10,
-            y:10,
-            width:15,
-            height:10,
-            shape:"RECTANGLE"
-        };
+    const bsp = new BSPGenerator();
 
+    const result = bsp.generate(grid);
 
-    roomGenerator.carveRoom(room);
+    for(const room of result.rooms)
+    {
+        roomGenerator.carveRoom(room);
+    }
 
     let wallBuilder =
         new RoomWallBuilder();
