@@ -5,7 +5,8 @@ export class Room {
         x,
         y,
         width,
-        height
+        height,
+        shape = "RECTANGLE"
     )
     {
         this.id = id;
@@ -17,6 +18,8 @@ export class Room {
         this.height = height;
 
         this.type = "NORMAL";
+
+        this.shape = shape;
     }
 
 
@@ -55,6 +58,7 @@ export class Room {
         return this.y + this.height - 1;
     }
 
+
     wallPointTowards(other)
     {
         const dx =
@@ -66,46 +70,62 @@ export class Room {
 
         if(Math.abs(dx) > Math.abs(dy))
         {
+            // Other room is to the RIGHT
             if(dx > 0)
             {
                 return [
                     this.right,
-                    Math.floor(
-                        this.centerY
+                    this.randomInt(
+                        this.y + 1,
+                        this.top - 1
                     )
                 ];
             }
+
+            // Other room is to the LEFT
             else
             {
                 return [
                     this.left,
-                    Math.floor(
-                        this.centerY
+                    this.randomInt(
+                        this.y + 1,
+                        this.top - 1
                     )
                 ];
             }
         }
+
+        // Other room is ABOVE
+        else if(dy > 0)
+        {
+            return [
+                this.randomInt(
+                    this.x + 1,
+                    this.right - 1
+                ),
+                this.top
+            ];
+        }
+
+        // Other room is BELOW
         else
         {
-            if(dy > 0)
-            {
-                return [
-                    Math.floor(
-                        this.centerX
-                    ),
-                    this.top
-                ];
-            }
-            else
-            {
-                return [
-                    Math.floor(
-                        this.centerX
-                    ),
-                    this.bottom
-                ];
-            }
+            return [
+                this.randomInt(
+                    this.x + 1,
+                    this.right - 1
+                ),
+                this.bottom
+            ];
         }
     }
 
+
+    randomInt(min, max)
+    {
+        return Math.floor(
+            Math.random() *
+            (max - min + 1)
+        ) + min;
+    }
 }

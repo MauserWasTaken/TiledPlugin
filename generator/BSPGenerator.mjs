@@ -1,6 +1,6 @@
 import { BSPNode } from "./BSPNode.mjs";
 import { Room } from "./Room.mjs";
-import {CorridorGenerator} from "./CorridorGenerator.mjs";
+import { CorridorGenerator } from "./CorridorGenerator.mjs";
 
 export class BSPGenerator
 {
@@ -13,15 +13,25 @@ export class BSPGenerator
             grid.height
         );
 
+
         this.split(root);
 
+
         const rooms = [];
+
 
         this.createRooms(
             root,
             rooms,
             grid
         );
+
+
+        // Assign START, EXIT and TREASURE
+        this.assignRoomTypes(
+            rooms
+        );
+
 
         return {
             root,
@@ -33,6 +43,7 @@ export class BSPGenerator
     split(node)
     {
         const minSize = 16;
+
 
         if(
             node.width <= minSize ||
@@ -57,12 +68,14 @@ export class BSPGenerator
                     Math.floor(node.height * 2 / 3)
                 );
 
+
             node.left = new BSPNode(
                 node.x,
                 node.y,
                 node.width,
                 split
             );
+
 
             node.right = new BSPNode(
                 node.x,
@@ -79,12 +92,14 @@ export class BSPGenerator
                     Math.floor(node.width * 2 / 3)
                 );
 
+
             node.left = new BSPNode(
                 node.x,
                 node.y,
                 split,
                 node.height
             );
+
 
             node.right = new BSPNode(
                 node.x + split,
@@ -93,6 +108,7 @@ export class BSPGenerator
                 node.height
             );
         }
+
 
         this.split(node.left);
         this.split(node.right);
@@ -107,8 +123,10 @@ export class BSPGenerator
             const minRoomSize = 8;
             const maxAspectRatio = 1.5;
 
+
             const maxRoomWidth =
                 node.width - padding * 2;
+
 
             const maxRoomHeight =
                 node.height - padding * 2;
@@ -126,13 +144,14 @@ export class BSPGenerator
             let roomWidth =
                 Math.floor(
                     maxRoomWidth *
-                    this.randomRange(0.70,0.95)
+                    this.randomRange(0.70, 0.95)
                 );
+
 
             let roomHeight =
                 Math.floor(
                     maxRoomHeight *
-                    this.randomRange(0.70,0.95)
+                    this.randomRange(0.70, 0.95)
                 );
 
 
@@ -141,6 +160,7 @@ export class BSPGenerator
                     roomWidth,
                     minRoomSize
                 );
+
 
             roomHeight =
                 Math.max(
@@ -157,6 +177,7 @@ export class BSPGenerator
                     );
             }
 
+
             if(roomHeight > roomWidth * maxAspectRatio)
             {
                 roomHeight =
@@ -168,6 +189,7 @@ export class BSPGenerator
 
             const xOffsetMax =
                 node.width - roomWidth;
+
 
             const yOffsetMax =
                 node.height - roomHeight;
@@ -197,16 +219,36 @@ export class BSPGenerator
                 );
 
 
+            let shape;
+
+            const shapeRoll = this.randomInt(0, 99);
+
+            if(shapeRoll <= 60)
+            {
+                shape = "RECTANGLE";
+            }
+            else if(shapeRoll <= 80)
+            {
+                shape = "CIRCLE";
+            }
+            else
+            {
+                shape = "CROSS";
+            }
+
             const room = new Room(
                 rooms.length,
                 roomX,
                 roomY,
                 roomWidth,
-                roomHeight
+                roomHeight,
+                shape
             );
+
 
             node.room = room;
             rooms.push(room);
+
 
             return;
         }
@@ -221,6 +263,7 @@ export class BSPGenerator
             );
         }
 
+
         if(node.right)
         {
             this.createRooms(
@@ -232,7 +275,40 @@ export class BSPGenerator
     }
 
 
-    randomInt(min,max)
+    assignRoomTypes(rooms)
+    {
+        if(rooms.length === 0)
+            return;
+
+
+        // First room = START
+        rooms[0].type = "START";
+
+
+        // Last room = EXIT
+        if(rooms.length > 1)
+        {
+            rooms[rooms.length - 1].type = "EXIT";
+        }
+
+
+        // Middle rooms have a 20% chance
+        // of becoming TREASURE rooms
+        for(
+            let i = 1;
+            i < rooms.length - 1;
+            i++
+        )
+        {
+            if(Math.random() < 0.2)
+            {
+                rooms[i].type = "TREASURE";
+            }
+        }
+    }
+
+
+    randomInt(min, max)
     {
         return Math.floor(
             Math.random() *
@@ -241,24 +317,22 @@ export class BSPGenerator
     }
 
 
-    randomRange(min,max)
+    randomRange(min, max)
     {
         return Math.random() *
             (max - min) +
             min;
     }
 
-    connectRooms(node,grid)
-    {
 
+    connectRooms(node, grid)
+    {
         if(node.isLeaf())
             return;
 
 
-
         if(node.left && node.right)
         {
-
             this.connectRooms(
                 node.left,
                 grid
@@ -285,7 +359,6 @@ export class BSPGenerator
 
             if(roomA && roomB)
             {
-
                 const corridor =
                     new CorridorGenerator();
 
@@ -300,10 +373,10 @@ export class BSPGenerator
         }
     }
 
+
     findRandomRoom(node)
     {
-
-        let rooms=[];
+        let rooms = [];
 
 
         this.collectRooms(
@@ -312,37 +385,39 @@ export class BSPGenerator
         );
 
 
-        if(rooms.length===0)
+        if(rooms.length === 0)
             return null;
 
 
         return rooms[
             Math.floor(
-                Math.random()*rooms.length
+                Math.random() * rooms.length
             )
             ];
     }
 
 
-
-    collectRooms(node,rooms)
+    collectRooms(node, rooms)
     {
-
         if(node.room)
             rooms.push(node.room);
 
 
         if(node.left)
+        {
             this.collectRooms(
                 node.left,
                 rooms
             );
+        }
 
 
         if(node.right)
+        {
             this.collectRooms(
                 node.right,
                 rooms
             );
+        }
     }
 }
