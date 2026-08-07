@@ -15,6 +15,7 @@ export const WallTile = {
     BOTTOM_LEFT:25,
     BOTTOM_RIGHT:27,
 
+
     BRICK: 14,
     BRICK_LEFT:57,
     BRICK_RIGHT:59,
