@@ -51,11 +51,6 @@ export function generateDungeon()
 
     const result = bsp.generate(grid);
 
-    for(const room of result.rooms)
-    {
-        roomGenerator.carveRoom(room);
-    }
-
     // NEW
     bsp.connectRooms(
         result.root,

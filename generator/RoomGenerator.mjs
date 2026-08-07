@@ -61,8 +61,9 @@ export class RoomGenerator {
 
 
         let radius =
-            Math.min(room.width, room.height) / 2 + 1;
-
+            Math.floor(
+                Math.min(room.width, room.height) / 2
+            ) + 1;
 
 
         for(

@@ -52,65 +52,65 @@ export class WallVariantGenerator {
 
     calculateVariant(grid,x,y)
     {
-        let up =
+        const floorUp =
             grid.isFloor(x,y-1);
 
-        let down =
+        const floorDown =
             grid.isFloor(x,y+1);
 
-        let left =
+        const floorLeft =
             grid.isFloor(x-1,y);
 
-        let right =
+        const floorRight =
             grid.isFloor(x+1,y);
 
 
-        let upLeft =
+        const floorUpLeft =
             grid.isFloor(x-1,y-1);
 
-        let upRight =
+        const floorUpRight =
             grid.isFloor(x+1,y-1);
 
-        let downLeft =
+        const floorDownLeft =
             grid.isFloor(x-1,y+1);
 
-        let downRight =
+        const floorDownRight =
             grid.isFloor(x+1,y+1);
 
 
+        // outside corners
 
-        // corners
-        if(downRight && !down && !right)
+        if(floorDownRight && !floorDown && !floorRight)
             return WallTile.TOP_LEFT;
 
 
-        if(downLeft && !down && !left)
+        if(floorDownLeft && !floorDown && !floorLeft)
             return WallTile.TOP_RIGHT;
 
 
-        if(upRight && !up && !right)
-            return WallTile.BOTTOM_RIGHT;
-
-
-        if(upLeft && !up && !left)
+        if(floorUpRight && !floorUp && !floorRight)
             return WallTile.BOTTOM_LEFT;
 
 
+        if(floorUpLeft && !floorUp && !floorLeft)
+            return WallTile.BOTTOM_RIGHT;
+
 
         // straight walls
-        if(down)
+
+        if(floorDown)
             return WallTile.TOP;
 
 
-        if(up)
+        if(floorUp)
             return WallTile.BOTTOM;
 
 
-        if(right)
+        if(floorRight)
             return WallTile.LEFT;
 
 
-        if(left)
+        if(floorLeft)
             return WallTile.RIGHT;
 
 

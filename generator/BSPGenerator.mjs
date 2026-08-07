@@ -1,6 +1,7 @@
 import { BSPNode } from "./BSPNode.mjs";
 import { Room } from "./Room.mjs";
 import { CorridorGenerator } from "./CorridorGenerator.mjs";
+import {RoomGenerator} from "./RoomGenerator.mjs";
 
 export class BSPGenerator
 {
@@ -248,6 +249,9 @@ export class BSPGenerator
 
             node.room = room;
             rooms.push(room);
+
+            const generator = new RoomGenerator(grid);
+            generator.carveRoom(room);
 
 
             return;
