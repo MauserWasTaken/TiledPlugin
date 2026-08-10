@@ -1,6 +1,5 @@
 export class RoomWallBuilder {
 
-
     generate(grid)
     {
         let floors = [];
@@ -28,10 +27,12 @@ export class RoomWallBuilder {
     }
 
 
-
     makeWall(grid,x,y)
     {
-        if(grid.isInside(x,y) && !grid.isFloor(x,y))
+        if(
+            grid.isInside(x,y) &&
+            !grid.isFloor(x,y)
+        )
         {
             grid.setWall(x,y);
         }

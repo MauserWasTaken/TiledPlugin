@@ -1,12 +1,9 @@
 import {WallTile} from "./WallTile.mjs";
 
-
 export class BrickGenerator {
-
 
     generate(grid)
     {
-
         for(
             let y=1;
             y<grid.height;
@@ -19,7 +16,6 @@ export class BrickGenerator {
                 x++
             )
             {
-
                 let texture =
                     grid.getWallVariant(x,y);
 
@@ -28,6 +24,38 @@ export class BrickGenerator {
                 {
 
                     case WallTile.TOP:
+
+                        grid.setWall(
+                            x,
+                            y+1
+                        );
+
+                        grid.setWallVariant(
+                            x,
+                            y+1,
+                            WallTile.BRICK
+                        );
+
+                        break;
+
+
+                    case WallTile.INNER_BOTTOM_LEFT:
+
+                        grid.setWall(
+                            x,
+                            y+1
+                        );
+
+                        grid.setWallVariant(
+                            x,
+                            y+1,
+                            WallTile.BRICK
+                        );
+
+                        break;
+
+
+                    case WallTile.INNER_BOTTOM_RIGHT:
 
                         grid.setWall(
                             x,

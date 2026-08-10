@@ -60,6 +60,13 @@ export class Grid {
             this.tiles[y][x] === "FLOOR";
     }
 
+    getTile(x,y)
+    {
+        if(!this.isInside(x,y))
+            return "WALL";
+
+        return this.tiles[y][x];
+    }
 
     setWallVariant(x,y,variant)
     {

@@ -70,23 +70,6 @@ export function generateDungeon()
         grid
     );
 
-    for(let y=8;y<23;y++)
-    {
-        let row="";
-
-        for(let x=8;x<28;x++)
-        {
-            if(grid.isFloor(x,y))
-                row += "F";
-            else
-                row += "W";
-        }
-
-        tiled.log(row);
-    }
-
-
-
     let brickGenerator =
         new BrickGenerator();
 
