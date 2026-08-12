@@ -68,60 +68,75 @@ export class Room {
             other.centerY - this.centerY;
 
 
+        /*
+         * The room is mainly to the left/right.
+         */
+
         if(Math.abs(dx) > Math.abs(dy))
         {
             // Other room is to the RIGHT
             if(dx > 0)
             {
-                return [
-                    this.right,
-                    this.randomInt(
+                return {
+                    x: this.right,
+
+                    y: this.randomInt(
                         this.y + 1,
                         this.top - 1
-                    )
-                ];
+                    ),
+
+                    direction: "RIGHT"
+                };
             }
+
 
             // Other room is to the LEFT
-            else
-            {
-                return [
-                    this.left,
-                    this.randomInt(
-                        this.y + 1,
-                        this.top - 1
-                    )
-                ];
-            }
+            return {
+                x: this.left,
+
+                y: this.randomInt(
+                    this.y + 1,
+                    this.top - 1
+                ),
+
+                direction: "LEFT"
+            };
         }
 
-        // Other room is ABOVE
-        else if(dy > 0)
+
+        /*
+         * The room is mainly above/below.
+         */
+
+        if(dy > 0)
         {
-            return [
-                this.randomInt(
+            return {
+                x: this.randomInt(
                     this.x + 1,
                     this.right - 1
                 ),
-                this.top
-            ];
+
+                y: this.top,
+
+                direction: "UP"
+            };
         }
 
-        // Other room is BELOW
-        else
-        {
-            return [
-                this.randomInt(
-                    this.x + 1,
-                    this.right - 1
-                ),
-                this.bottom
-            ];
-        }
+
+        return {
+            x: this.randomInt(
+                this.x + 1,
+                this.right - 1
+            ),
+
+            y: this.bottom,
+
+            direction: "DOWN"
+        };
     }
 
 
-    randomInt(min, max)
+    randomInt(min,max)
     {
         return Math.floor(
             Math.random() *
