@@ -49,7 +49,7 @@ export class BrickGenerator {
                         grid.setWallVariant(
                             x,
                             y+1,
-                            WallTile.BRICK
+                            WallTile.BRICK_RIGHT
                         );
 
                         break;
@@ -65,7 +65,7 @@ export class BrickGenerator {
                         grid.setWallVariant(
                             x,
                             y+1,
-                            WallTile.BRICK
+                            WallTile.BRICK_LEFT
                         );
 
                         break;

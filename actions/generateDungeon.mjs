@@ -6,6 +6,7 @@ import { BrickGenerator } from "../generator/BrickGenerator.mjs";
 import {RoomWallBuilder} from "../generator/RoomWallBuilder.mjs";
 import {WallTile} from "../generator/WallTile.mjs";
 import {BSPGenerator} from "../generator/BSPGenerator.mjs";
+import {WallGeometryCleaner} from "../generator/WallGeometryCleaner.mjs";
 
 
 export function generateDungeon()
@@ -57,8 +58,22 @@ export function generateDungeon()
         grid
     );
 
+    for(let y = 0; y < grid.height; y++)
+    {
+        let row = "";
+
+        for(let x = 0; x < grid.width; x++)
+        {
+            row += grid.isFloor(x,y) ? "." : "#";
+        }
+
+        tiled.log(row);
+    }
+
     let wallBuilder =
         new RoomWallBuilder();
+
+
 
     wallBuilder.generate(grid);
 
