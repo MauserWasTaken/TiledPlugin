@@ -6,7 +6,7 @@ import { BrickGenerator } from "../generator/BrickGenerator.mjs";
 import {RoomWallBuilder} from "../generator/RoomWallBuilder.mjs";
 import {WallTile} from "../generator/WallTile.mjs";
 import {BSPGenerator} from "../generator/BSPGenerator.mjs";
-import {WallGeometryCleaner} from "../generator/WallGeometryCleaner.mjs";
+import {WallGeometryNormalizer} from "../generator/WallGeometryNormalizer.mjs";
 
 
 export function generateDungeon()
@@ -57,6 +57,51 @@ export function generateDungeon()
         result.root,
         grid
     );
+
+    tiled.log("[DEBUG] FLOOR MAP BEFORE NORMALIZER");
+
+    for(let y = 0; y < grid.height; y++)
+    {
+        let row = "";
+
+        for(let x = 0; x < grid.width; x++)
+        {
+            row += grid.isFloor(x,y) ? "." : "#";
+        }
+
+        tiled.log(row);
+    }
+
+    const normalizer =
+        new WallGeometryNormalizer();
+
+    const normalized =
+        normalizer.generate(grid);
+
+    if(!normalized)
+    {
+        tiled.log(
+            "[DUNGEON] Wall normalization failed."
+        );
+
+        return;
+    }
+
+    const invalid =
+        normalizer.findInvalidGeometry(grid);
+
+    if(invalid.length !== 0)
+    {
+        tiled.log(
+            "[DUNGEON] FINAL WALL VALIDATION FAILED."
+        );
+
+        normalizer.logInvalidGeometry(
+            invalid
+        );
+
+        return;
+    }
 
     for(let y = 0; y < grid.height; y++)
     {

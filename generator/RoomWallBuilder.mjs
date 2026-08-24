@@ -34,6 +34,11 @@ export class RoomWallBuilder {
             !grid.isFloor(x,y)
         )
         {
+            /*
+            tiled.log(
+                `[WALL BUILDER] wall=(${x},${y})`
+            );
+*/
             grid.setWall(x,y);
         }
     }

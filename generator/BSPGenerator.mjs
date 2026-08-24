@@ -335,29 +335,56 @@ export class BSPGenerator
             return;
 
 
-        if(node.left && node.right)
+        /*
+         * First connect the two child subtrees internally.
+         */
+        if(node.left)
         {
             this.connectRooms(
                 node.left,
                 grid
             );
+        }
 
 
+        if(node.right)
+        {
             this.connectRooms(
                 node.right,
                 grid
             );
+        }
 
 
+        /*
+         * Now connect the two BSP partitions.
+         *
+         * This is the important BSP property:
+         *
+         *     left subtree
+         *          |
+         *          +---- corridor ----+
+         *                                 |
+         *                           right subtree
+         *
+         * We do NOT connect arbitrary rooms globally.
+         */
+        if(
+            node.left &&
+            node.right
+        )
+        {
             const roomA =
-                this.findRandomRoom(
-                    node.left
+                this.findConnectionRoom(
+                    node.left,
+                    node.right
                 );
 
 
             const roomB =
-                this.findRandomRoom(
-                    node.right
+                this.findConnectionRoom(
+                    node.right,
+                    node.left
                 );
 
 
@@ -378,9 +405,12 @@ export class BSPGenerator
     }
 
 
-    findRandomRoom(node)
+    findConnectionRoom(node, otherNode)
     {
-        let rooms = [];
+        /*
+         * Collect all rooms in this BSP subtree.
+         */
+        const rooms = [];
 
 
         this.collectRooms(
@@ -393,9 +423,76 @@ export class BSPGenerator
             return null;
 
 
+        /*
+         * Find rooms whose centers are closest to the
+         * opposite BSP region.
+         *
+         * This produces much more sensible BSP corridors
+         * than completely random room selection.
+         */
+        const otherCenter = {
+            x:
+                otherNode.x +
+                Math.floor(
+                    otherNode.width / 2
+                ),
+
+            y:
+                otherNode.y +
+                Math.floor(
+                    otherNode.height / 2
+                )
+        };
+
+
+        rooms.sort(
+            (a,b) =>
+            {
+                const distanceA =
+                    Math.abs(
+                        a.centerX -
+                        otherCenter.x
+                    ) +
+                    Math.abs(
+                        a.centerY -
+                        otherCenter.y
+                    );
+
+
+                const distanceB =
+                    Math.abs(
+                        b.centerX -
+                        otherCenter.x
+                    ) +
+                    Math.abs(
+                        b.centerY -
+                        otherCenter.y
+                    );
+
+
+                return distanceA -
+                    distanceB;
+            }
+        );
+
+
+        /*
+         * Add a little randomness among the best candidates.
+         *
+         * This keeps the dungeon from becoming completely
+         * deterministic while still respecting BSP structure.
+         */
+        const candidateCount =
+            Math.min(
+                3,
+                rooms.length
+            );
+
+
         return rooms[
             Math.floor(
-                Math.random() * rooms.length
+                Math.random() *
+                candidateCount
             )
             ];
     }
@@ -403,8 +500,16 @@ export class BSPGenerator
 
     collectRooms(node, rooms)
     {
+        if(!node)
+            return;
+
+
         if(node.room)
-            rooms.push(node.room);
+        {
+            rooms.push(
+                node.room
+            );
+        }
 
 
         if(node.left)

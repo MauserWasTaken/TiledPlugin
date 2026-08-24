@@ -68,21 +68,16 @@ export class Room {
             other.centerY - this.centerY;
 
 
-        /*
-         * The room is mainly to the left/right.
-         */
-
         if(Math.abs(dx) > Math.abs(dy))
         {
-            // Other room is to the RIGHT
             if(dx > 0)
             {
                 return {
                     x: this.right,
 
                     y: this.randomInt(
-                        this.y + 1,
-                        this.top - 1
+                        this.y + 2,
+                        this.top - 2
                     ),
 
                     direction: "RIGHT"
@@ -90,13 +85,12 @@ export class Room {
             }
 
 
-            // Other room is to the LEFT
             return {
                 x: this.left,
 
                 y: this.randomInt(
-                    this.y + 1,
-                    this.top - 1
+                    this.y + 2,
+                    this.top - 2
                 ),
 
                 direction: "LEFT"
@@ -104,16 +98,12 @@ export class Room {
         }
 
 
-        /*
-         * The room is mainly above/below.
-         */
-
         if(dy > 0)
         {
             return {
                 x: this.randomInt(
-                    this.x + 1,
-                    this.right - 1
+                    this.x + 2,
+                    this.right - 2
                 ),
 
                 y: this.top,
@@ -125,8 +115,8 @@ export class Room {
 
         return {
             x: this.randomInt(
-                this.x + 1,
-                this.right - 1
+                this.x + 2,
+                this.right - 2
             ),
 
             y: this.bottom,

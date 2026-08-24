@@ -139,11 +139,6 @@ export class WallVariantGenerator {
             right
         )
         {
-            tiled.log(
-                "INSIDE CORNER DOWN + RIGHT:",
-                x,
-                y
-            );
 
             return WallTile.INNER_BOTTOM_LEFT;
         }
@@ -155,11 +150,6 @@ export class WallVariantGenerator {
             left
         )
         {
-            tiled.log(
-                "INSIDE CORNER DOWN + LEFT:",
-                x,
-                y
-            );
 
             return WallTile.INNER_BOTTOM_RIGHT;
         }
@@ -171,11 +161,6 @@ export class WallVariantGenerator {
             right
         )
         {
-            tiled.log(
-                "INSIDE CORNER UP + RIGHT:",
-                x,
-                y
-            );
 
             return WallTile.INNER_TOP_LEFT;
         }
@@ -187,11 +172,6 @@ export class WallVariantGenerator {
             left
         )
         {
-            tiled.log(
-                "INSIDE CORNER UP + LEFT:",
-                x,
-                y
-            );
 
             return WallTile.INNER_TOP_RIGHT;
         }
