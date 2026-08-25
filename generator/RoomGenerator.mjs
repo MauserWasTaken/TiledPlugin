@@ -1,6 +1,5 @@
-export class RoomGenerator {
-
-
+export class RoomGenerator
+{
     constructor(grid)
     {
         this.grid = grid;
@@ -9,28 +8,124 @@ export class RoomGenerator {
 
     carveRoom(room)
     {
+        /*
+         * Choose the shape here rather than relying on the
+         * BSP generator to assign one.
+         *
+         * If a shape was already explicitly assigned, keep it.
+         */
+
+        if(
+            !room.shape ||
+            room.shape === "RANDOM"
+        )
+        {
+            room.shape =
+                this.chooseShape(room);
+        }
+
+
         switch(room.shape)
         {
             case "RECTANGLE":
                 this.carveRectangle(room);
                 break;
 
-
             case "CIRCLE":
                 this.carveCircle(room);
                 break;
-
 
             case "CROSS":
                 this.carveCross(room);
                 break;
 
-
             default:
+                room.shape = "RECTANGLE";
+
                 this.carveRectangle(room);
+                break;
         }
     }
 
+
+    chooseShape(room)
+    {
+        const minSize =
+            Math.min(
+                room.width,
+                room.height
+            );
+
+
+        const maxSize =
+            Math.max(
+                room.width,
+                room.height
+            );
+
+
+        const aspectRatio =
+            maxSize / minSize;
+
+
+        /*
+         * ---------------------------------------------------------
+         * Small rooms
+         * ---------------------------------------------------------
+         *
+         * Small rooms don't have enough space for a good circle
+         * or cross.
+         */
+
+        if(minSize < 7)
+        {
+            return "RECTANGLE";
+        }
+
+
+        /*
+         * ---------------------------------------------------------
+         * Very narrow rooms
+         * ---------------------------------------------------------
+         *
+         * A circle/cross in an extremely elongated room tends
+         * to produce bad geometry.
+         */
+
+        if(aspectRatio > 1.6)
+        {
+            return "RECTANGLE";
+        }
+
+
+        /*
+         * ---------------------------------------------------------
+         * Shape probabilities
+         * ---------------------------------------------------------
+         *
+         * 40% rectangle
+         * 30% circle
+         * 30% cross
+         */
+
+        const roll =
+            Math.random();
+
+
+        if(roll < 0.40)
+        {
+            return "RECTANGLE";
+        }
+
+
+        if(roll < 0.70)
+        {
+            return "CIRCLE";
+        }
+
+
+        return "CROSS";
+    }
 
 
     carveRectangle(room)
@@ -47,29 +142,32 @@ export class RoomGenerator {
                 x++
             )
             {
-                this.carve(x,y);
+                this.carve(x, y);
             }
         }
     }
 
 
-
     carveCircle(room)
     {
         const centerX =
-            (room.x + room.right) / 2;
-
+            room.x +
+            (room.width - 1) / 2;
 
         const centerY =
-            (room.y + room.top) / 2;
+            room.y +
+            (room.height - 1) / 2;
 
+
+        /*
+         * Leave one tile of margin from the room bounds.
+         */
 
         const radiusX =
             Math.max(
                 2,
                 (room.width - 2) / 2
             );
-
 
         const radiusY =
             Math.max(
@@ -78,29 +176,31 @@ export class RoomGenerator {
             );
 
 
+        const floor =
+            new Set();
+
+
         /*
-         * First create the normal ellipse.
+         * ---------------------------------------------------------
+         * Create ellipse
+         * ---------------------------------------------------------
          */
-
-        const floor = new Set();
-
 
         for(
             let y = room.y + 1;
-            y < room.top;
+            y < room.y + room.height - 1;
             y++
         )
         {
             for(
                 let x = room.x + 1;
-                x < room.right;
+                x < room.x + room.width - 1;
                 x++
             )
             {
                 const dx =
                     (x - centerX) /
                     radiusX;
-
 
                 const dy =
                     (y - centerY) /
@@ -122,11 +222,8 @@ export class RoomGenerator {
 
         /*
          * ---------------------------------------------------------
-         * Remove isolated one-tile protrusions.
+         * Remove isolated cells
          * ---------------------------------------------------------
-         *
-         * A tile is suspicious if it sticks out from the room
-         * without having a second supporting tile beside it.
          */
 
         const remove = [];
@@ -134,47 +231,40 @@ export class RoomGenerator {
 
         for(const key of floor)
         {
-            const [x,y] =
+            const [x, y] =
                 key
                     .split(",")
                     .map(Number);
 
 
-            const left =
-                floor.has(
-                    `${x - 1},${y}`
-                );
+            let neighbours = 0;
 
-
-            const right =
-                floor.has(
-                    `${x + 1},${y}`
-                );
-
-
-            const up =
-                floor.has(
-                    `${x},${y - 1}`
-                );
-
-
-            const down =
-                floor.has(
-                    `${x},${y + 1}`
-                );
-
-
-            /*
-             * A tile with no horizontal support and no vertical
-             * support is isolated.
-             */
 
             if(
-                !left &&
-                !right &&
-                !up &&
-                !down
+                floor.has(`${x - 1},${y}`)
             )
+                neighbours++;
+
+
+            if(
+                floor.has(`${x + 1},${y}`)
+            )
+                neighbours++;
+
+
+            if(
+                floor.has(`${x},${y - 1}`)
+            )
+                neighbours++;
+
+
+            if(
+                floor.has(`${x},${y + 1}`)
+            )
+                neighbours++;
+
+
+            if(neighbours === 0)
             {
                 remove.push(key);
             }
@@ -189,13 +279,13 @@ export class RoomGenerator {
 
         /*
          * ---------------------------------------------------------
-         * Apply the room.
+         * Apply
          * ---------------------------------------------------------
          */
 
         for(const key of floor)
         {
-            const [x,y] =
+            const [x, y] =
                 key
                     .split(",")
                     .map(Number);
@@ -207,8 +297,6 @@ export class RoomGenerator {
             );
         }
     }
-
-
 
 
     carveCross(room)
@@ -227,109 +315,75 @@ export class RoomGenerator {
 
 
         /*
-         * The cross is built from:
+         * The cross has:
          *
-         * 1. A central rectangular body.
-         * 2. A two-tile-wide horizontal arm.
-         * 3. A two-tile-wide vertical arm.
+         *       |
+         *       |
+         *   ----+----
+         *       |
+         *       |
          *
-         * This guarantees that an arm can never be
-         * only one tile thick.
+         * The arms are deliberately wider than corridors.
          */
 
 
-        const bodyWidth =
+        const armWidth =
             Math.max(
-                4,
+                3,
                 Math.floor(
-                    room.width * 0.5
+                    Math.min(
+                        room.width,
+                        room.height
+                    ) / 4
                 )
             );
-
-
-        const bodyHeight =
-            Math.max(
-                4,
-                Math.floor(
-                    room.height * 0.5
-                )
-            );
-
-
-        const bodyX =
-            centerX -
-            Math.floor(bodyWidth / 2);
-
-
-        const bodyY =
-            centerY -
-            Math.floor(bodyHeight / 2);
 
 
         /*
-         * ---------------------------------------------------------
-         * Central body
-         * ---------------------------------------------------------
+         * Keep the arm width odd so the cross has a proper
+         * central tile.
          */
 
-        for(
-            let y = bodyY;
-            y < bodyY + bodyHeight;
-            y++
-        )
-        {
-            for(
-                let x = bodyX;
-                x < bodyX + bodyWidth;
-                x++
-            )
-            {
-                this.carve(
-                    x,
-                    y
-                );
-            }
-        }
+        const width =
+            armWidth % 2 === 0
+                ? armWidth + 1
+                : armWidth;
+
+
+        const half =
+            Math.floor(
+                width / 2
+            );
 
 
         /*
          * ---------------------------------------------------------
          * Horizontal arm
          * ---------------------------------------------------------
-         *
-         * Two tiles high.
          */
-
-        const horizontalWidth =
-            room.width -
-            2;
-
 
         const horizontalStartX =
             room.x + 1;
 
-
-        const horizontalStartY =
-            centerY -
-            1;
+        const horizontalEndX =
+            room.x +
+            room.width -
+            2;
 
 
         for(
-            let y = horizontalStartY;
-            y < horizontalStartY + 2;
+            let y = centerY - half;
+            y <= centerY + half;
             y++
         )
         {
             for(
                 let x = horizontalStartX;
-                x < horizontalStartX + horizontalWidth;
+                x <= horizontalEndX;
                 x++
             )
             {
-                this.carve(
-                    x,
-                    y
-                );
+                this.carve(x, y);
             }
         }
 
@@ -338,48 +392,41 @@ export class RoomGenerator {
          * ---------------------------------------------------------
          * Vertical arm
          * ---------------------------------------------------------
-         *
-         * Two tiles wide.
          */
-
-        const verticalHeight =
-            room.height -
-            2;
-
-
-        const verticalStartX =
-            centerX -
-            1;
-
 
         const verticalStartY =
             room.y + 1;
 
+        const verticalEndY =
+            room.y +
+            room.height -
+            2;
+
 
         for(
             let y = verticalStartY;
-            y < verticalStartY + verticalHeight;
+            y <= verticalEndY;
             y++
         )
         {
             for(
-                let x = verticalStartX;
-                x < verticalStartX + 2;
+                let x = centerX - half;
+                x <= centerX + half;
                 x++
             )
             {
-                this.carve(
-                    x,
-                    y
-                );
+                this.carve(x, y);
             }
         }
     }
 
 
-
-    carve(x,y)
+    carve(x, y)
     {
-        this.grid.setFloor(x,y,"ROOM");
+        this.grid.setFloor(
+            x,
+            y,
+            "ROOM"
+        );
     }
 }
