@@ -6,48 +6,6 @@ export class RoomGenerator
     }
 
 
-    carveRoom(room)
-    {
-        /*
-         * Choose the shape here rather than relying on the
-         * BSP generator to assign one.
-         *
-         * If a shape was already explicitly assigned, keep it.
-         */
-
-        if(
-            !room.shape ||
-            room.shape === "RANDOM"
-        )
-        {
-            room.shape =
-                this.chooseShape(room);
-        }
-
-
-        switch(room.shape)
-        {
-            case "RECTANGLE":
-                this.carveRectangle(room);
-                break;
-
-            case "CIRCLE":
-                this.carveCircle(room);
-                break;
-
-            case "CROSS":
-                this.carveCross(room);
-                break;
-
-            default:
-                room.shape = "RECTANGLE";
-
-                this.carveRectangle(room);
-                break;
-        }
-    }
-
-
     chooseShape(room)
     {
         const minSize =
@@ -69,14 +27,8 @@ export class RoomGenerator
 
 
         /*
-         * ---------------------------------------------------------
-         * Small rooms
-         * ---------------------------------------------------------
-         *
-         * Small rooms don't have enough space for a good circle
-         * or cross.
+         * Small rooms stay rectangular.
          */
-
         if(minSize < 7)
         {
             return "RECTANGLE";
@@ -84,14 +36,8 @@ export class RoomGenerator
 
 
         /*
-         * ---------------------------------------------------------
-         * Very narrow rooms
-         * ---------------------------------------------------------
-         *
-         * A circle/cross in an extremely elongated room tends
-         * to produce bad geometry.
+         * Very elongated rooms stay rectangular.
          */
-
         if(aspectRatio > 1.6)
         {
             return "RECTANGLE";
@@ -99,15 +45,10 @@ export class RoomGenerator
 
 
         /*
-         * ---------------------------------------------------------
-         * Shape probabilities
-         * ---------------------------------------------------------
-         *
-         * 40% rectangle
-         * 30% circle
-         * 30% cross
+         * 40% RECTANGLE
+         * 30% CIRCLE
+         * 30% CROSS
          */
-
         const roll =
             Math.random();
 
@@ -126,6 +67,51 @@ export class RoomGenerator
 
         return "CROSS";
     }
+
+
+    carveRoom(room) {
+        /*
+         * Choose the shape once.
+         *
+         * Store it on the Room so that every later system
+         * sees the same shape.
+         */
+        if (
+            !room.shape ||
+            room.shape === "RANDOM"
+        ) {
+            room.shape =
+                this.chooseShape(room);
+        }
+
+
+        switch (room.shape) {
+            case "RECTANGLE":
+                this.carveRectangle(room);
+                break;
+
+
+            case "CIRCLE":
+                this.carveCircle(room);
+                break;
+
+
+            case "CROSS":
+                this.carveCross(room);
+                break;
+
+
+            default:
+                room.shape =
+                    "RECTANGLE";
+
+                this.carveRectangle(room);
+                break;
+        }
+    }
+
+
+
 
 
     carveRectangle(room)
