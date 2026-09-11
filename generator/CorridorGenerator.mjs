@@ -44,9 +44,6 @@ export class CorridorGenerator
          * ---------------------------------------------------------
          * Find actual openings.
          * ---------------------------------------------------------
-         *
-         * These are based on the actual ROOM floor geometry,
-         * rather than the rectangular Room bounds.
          */
         const startCandidates =
             this.findConnectionCandidates(
@@ -80,7 +77,7 @@ export class CorridorGenerator
 
         /*
          * ---------------------------------------------------------
-         * Try every combination of openings.
+         * Generate and validate every possible route.
          * ---------------------------------------------------------
          */
         const routes = [];
@@ -113,11 +110,14 @@ export class CorridorGenerator
                             start,
                             end,
 
-                            score:
-                                this.routeScore(
-                                    route,
-                                    start,
-                                    end
+                            bends:
+                                this.getRouteBends(
+                                    route
+                                ),
+
+                            length:
+                                this.routeLength(
+                                    route
                                 )
                         });
                     }
@@ -126,11 +126,6 @@ export class CorridorGenerator
         }
 
 
-        /*
-         * ---------------------------------------------------------
-         * No valid route.
-         * ---------------------------------------------------------
-         */
         if(routes.length === 0)
         {
             tiled.log(
@@ -144,17 +139,193 @@ export class CorridorGenerator
 
         /*
          * ---------------------------------------------------------
-         * Select the best route.
+         * Count route types.
          * ---------------------------------------------------------
          */
-        routes.sort(
+        let straightCount = 0;
+        let oneBendCount = 0;
+        let twoBendCount = 0;
+
+
+        for(const candidate of routes)
+        {
+            if(candidate.bends === 0)
+            {
+                straightCount++;
+            }
+            else if(candidate.bends === 1)
+            {
+                oneBendCount++;
+            }
+            else if(candidate.bends === 2)
+            {
+                twoBendCount++;
+            }
+        }
+
+
+        tiled.log(
+            `[CORRIDOR DEBUG] ` +
+            `${roomA.id} -> ${roomB.id} ` +
+            `valid=${routes.length} ` +
+            `straight=${straightCount} ` +
+            `oneBend=${oneBendCount} ` +
+            `twoBend=${twoBendCount}`
+        );
+
+        /*
+         * ---------------------------------------------------------
+         * Select the most natural route.
+         * ---------------------------------------------------------
+         *
+         * Short routes are preferred, but bends have a small cost.
+         *
+         * This means:
+         *
+         *     short straight
+         *
+         * beats:
+         *
+         *     slightly longer one-bend
+         *
+         * but:
+         *
+         *     much shorter two-bend
+         *
+         * beats:
+         *
+         *     extremely long one-bend.
+         * ---------------------------------------------------------
+         */
+
+        /*
+   * ---------------------------------------------------------
+   * Select a route.
+   * ---------------------------------------------------------
+   *
+   * We still want reasonably short corridors, but we do not
+   * want the absolute shortest route to dominate the layout.
+   *
+   * A route with one or two bends is allowed to be somewhat
+   * longer than a straight route.
+   * ---------------------------------------------------------
+   */
+
+        const shortestLength =
+            Math.min(
+                ...routes.map(
+                    candidate => candidate.length
+                )
+            );
+
+
+        /*
+         * Do not allow enormous detours just for the sake of
+         * adding bends.
+         *
+         * A route may be up to 35% longer than the shortest
+         * available route.
+         */
+        const maximumReasonableLength =
+            shortestLength * 1.35;
+
+
+        /*
+         * Keep only routes that are reasonably short.
+         */
+        const reasonableRoutes =
+            routes.filter(
+                candidate =>
+                    candidate.length <=
+                    maximumReasonableLength
+            );
+
+
+        /*
+         * ---------------------------------------------------------
+         * Give bends a preference.
+         * ---------------------------------------------------------
+         *
+         * 0 bends:
+         *     no bonus
+         *
+         * 1 bend:
+         *     preferred
+         *
+         * 2 bends:
+         *     also preferred, but slightly less
+         *
+         * We use a bonus rather than a penalty so that a bend can
+         * compensate for a modest increase in corridor length.
+         * ---------------------------------------------------------
+         */
+
+        for(const candidate of reasonableRoutes)
+        {
+            let bendBonus = 0;
+
+            if(candidate.bends === 1)
+            {
+                bendBonus = 8;
+            }
+            else if(candidate.bends === 2)
+            {
+                bendBonus = 10;
+            }
+
+
+            candidate.selectionScore =
+                candidate.length -
+                bendBonus;
+        }
+
+
+        /*
+         * ---------------------------------------------------------
+         * Sort by the new score.
+         * ---------------------------------------------------------
+         */
+
+        reasonableRoutes.sort(
             (a,b) =>
-                a.score - b.score
+            {
+                return (
+                    a.selectionScore -
+                    b.selectionScore
+                );
+            }
         );
 
 
+        /*
+         * ---------------------------------------------------------
+         * Don't always choose the absolute best route.
+         *
+         * Take the best few candidates and randomly select one.
+         * ---------------------------------------------------------
+         */
+
+        const candidateCount =
+            Math.min(
+                5,
+                reasonableRoutes.length
+            );
+
+
+        const acceptableRoutes =
+            reasonableRoutes.slice(
+                0,
+                candidateCount
+            );
+
+
         const selected =
-            routes[0];
+            acceptableRoutes[
+                Math.floor(
+                    Math.random() *
+                    acceptableRoutes.length
+                )
+                ];
 
 
         /*
@@ -168,8 +339,9 @@ export class CorridorGenerator
             `${selected.start.direction} ` +
             `end=(${selected.end.x},${selected.end.y}) ` +
             `${selected.end.direction} ` +
+            `bends=${selected.bends} ` +
             `segments=${selected.route.length} ` +
-            `length=${this.routeLength(selected.route)}`
+            `length=${selected.length}`
         );
 
 
@@ -213,6 +385,62 @@ export class CorridorGenerator
 
 
         return true;
+    }
+
+    getRouteBends(route)
+    {
+        if(route.length <= 1)
+        {
+            return 0;
+        }
+
+
+        let bends = 0;
+
+        let previousDirection = null;
+
+
+        for(const segment of route)
+        {
+            let direction;
+
+
+            if(segment.x1 < segment.x2)
+            {
+                direction = "RIGHT";
+            }
+            else if(segment.x1 > segment.x2)
+            {
+                direction = "LEFT";
+            }
+            else if(segment.y1 < segment.y2)
+            {
+                direction = "UP";
+            }
+            else if(segment.y1 > segment.y2)
+            {
+                direction = "DOWN";
+            }
+            else
+            {
+                continue;
+            }
+
+
+            if(
+                previousDirection !== null &&
+                direction !== previousDirection
+            )
+            {
+                bends++;
+            }
+
+
+            previousDirection = direction;
+        }
+
+
+        return bends;
     }
 
 
@@ -974,22 +1202,20 @@ export class CorridorGenerator
 
 
         /*
-         * ---------------------------------------------------------
-         * Horizontal dog-leg
-         * ---------------------------------------------------------
+         * =========================================================
+         * HORIZONTAL DOG-LEGS
+         * =========================================================
          *
-         *     start
-         *       |
-         *       +--------+
-         *                |
-         *                +-------- end
+         * start ----+
+         *            |
+         *            +----------+
+         *                       |
+         *                       +---- end
          *
-         * The middle vertical run is created between two
-         * horizontal runs.
+         * The vertical section can be placed at several positions.
          */
-        if(
-            startRun.x !== endRun.x
-        )
+
+        if(startRun.x !== endRun.x)
         {
             const minX =
                 Math.min(
@@ -1005,64 +1231,146 @@ export class CorridorGenerator
                 );
 
 
-            const middleX =
-                Math.floor(
-                    (minX + maxX) / 2
+            const distance =
+                maxX - minX;
+
+
+            /*
+             * We need enough space for both horizontal runs.
+             */
+            const minimum =
+                minX +
+                this.minimumStraight;
+
+
+            const maximum =
+                maxX -
+                this.minimumStraight;
+
+
+            if(minimum <= maximum)
+            {
+                const positions = [];
+
+
+                /*
+                 * Left-ish.
+                 */
+                positions.push(
+                    minimum
                 );
 
 
-            const route = [
-                {
-                    x1: startOutside.x,
-                    y1: startOutside.y,
-                    x2: startRun.x,
-                    y2: startRun.y
-                },
+                /*
+                 * Center.
+                 */
+                positions.push(
+                    Math.floor(
+                        (minimum + maximum) / 2
+                    )
+                );
 
-                {
-                    x1: startRun.x,
-                    y1: startRun.y,
-                    x2: middleX,
-                    y2: startRun.y
-                },
 
-                {
-                    x1: middleX,
-                    y1: startRun.y,
-                    x2: middleX,
-                    y2: endRun.y
-                },
+                /*
+                 * Right-ish.
+                 */
+                positions.push(
+                    maximum
+                );
 
-                {
-                    x1: middleX,
-                    y1: endRun.y,
-                    x2: endRun.x,
-                    y2: endRun.y
-                },
 
+                /*
+                 * Add quarter positions for longer corridors.
+                 */
+                if(distance >= 12)
                 {
-                    x1: endRun.x,
-                    y1: endRun.y,
-                    x2: endOutside.x,
-                    y2: endOutside.y
+                    positions.push(
+                        Math.floor(
+                            minimum +
+                            (maximum - minimum) * 0.25
+                        )
+                    );
+
+
+                    positions.push(
+                        Math.floor(
+                            minimum +
+                            (maximum - minimum) * 0.75
+                        )
+                    );
                 }
-            ];
 
 
-            routes.push(
-                this.simplifyRoute(route)
-            );
+                /*
+                 * Remove duplicates.
+                 */
+                const uniquePositions =
+                    [...new Set(positions)];
+
+
+                for(const middleX of uniquePositions)
+                {
+                    const route = [
+                        {
+                            x1: startOutside.x,
+                            y1: startOutside.y,
+                            x2: startRun.x,
+                            y2: startRun.y
+                        },
+
+                        {
+                            x1: startRun.x,
+                            y1: startRun.y,
+                            x2: middleX,
+                            y2: startRun.y
+                        },
+
+                        {
+                            x1: middleX,
+                            y1: startRun.y,
+                            x2: middleX,
+                            y2: endRun.y
+                        },
+
+                        {
+                            x1: middleX,
+                            y1: endRun.y,
+                            x2: endRun.x,
+                            y2: endRun.y
+                        },
+
+                        {
+                            x1: endRun.x,
+                            y1: endRun.y,
+                            x2: endOutside.x,
+                            y2: endOutside.y
+                        }
+                    ];
+
+
+                    routes.push(
+                        this.simplifyRoute(route)
+                    );
+                }
+            }
         }
 
 
         /*
-         * ---------------------------------------------------------
-         * Vertical dog-leg
-         * ---------------------------------------------------------
+         * =========================================================
+         * VERTICAL DOG-LEGS
+         * =========================================================
+         *
+         * start
+         *   |
+         *   +--------+
+         *            |
+         *            +-------- end
+         *
+         * The horizontal section can be placed at several positions.
          */
-        if(
-            startRun.y !== endRun.y
-        )
+
+        if(startRun.y !== endRun.y)
         {
             const minY =
                 Math.min(
@@ -1078,53 +1386,122 @@ export class CorridorGenerator
                 );
 
 
-            const middleY =
-                Math.floor(
-                    (minY + maxY) / 2
+            const distance =
+                maxY - minY;
+
+
+            const minimum =
+                minY +
+                this.minimumStraight;
+
+
+            const maximum =
+                maxY -
+                this.minimumStraight;
+
+
+            if(minimum <= maximum)
+            {
+                const positions = [];
+
+
+                /*
+                 * Lower-ish.
+                 */
+                positions.push(
+                    minimum
                 );
 
 
-            const route = [
-                {
-                    x1: startOutside.x,
-                    y1: startOutside.y,
-                    x2: startRun.x,
-                    y2: startRun.y
-                },
+                /*
+                 * Center.
+                 */
+                positions.push(
+                    Math.floor(
+                        (minimum + maximum) / 2
+                    )
+                );
 
-                {
-                    x1: startRun.x,
-                    y1: startRun.y,
-                    x2: startRun.x,
-                    y2: middleY
-                },
 
-                {
-                    x1: startRun.x,
-                    y1: middleY,
-                    x2: endRun.x,
-                    y2: middleY
-                },
+                /*
+                 * Upper-ish.
+                 */
+                positions.push(
+                    maximum
+                );
 
-                {
-                    x1: endRun.x,
-                    y1: middleY,
-                    x2: endRun.x,
-                    y2: endRun.y
-                },
 
+                /*
+                 * Add quarter positions for longer corridors.
+                 */
+                if(distance >= 12)
                 {
-                    x1: endRun.x,
-                    y1: endRun.y,
-                    x2: endOutside.x,
-                    y2: endOutside.y
+                    positions.push(
+                        Math.floor(
+                            minimum +
+                            (maximum - minimum) * 0.25
+                        )
+                    );
+
+
+                    positions.push(
+                        Math.floor(
+                            minimum +
+                            (maximum - minimum) * 0.75
+                        )
+                    );
                 }
-            ];
 
 
-            routes.push(
-                this.simplifyRoute(route)
-            );
+                const uniquePositions =
+                    [...new Set(positions)];
+
+
+                for(const middleY of uniquePositions)
+                {
+                    const route = [
+                        {
+                            x1: startOutside.x,
+                            y1: startOutside.y,
+                            x2: startRun.x,
+                            y2: startRun.y
+                        },
+
+                        {
+                            x1: startRun.x,
+                            y1: startRun.y,
+                            x2: startRun.x,
+                            y2: middleY
+                        },
+
+                        {
+                            x1: startRun.x,
+                            y1: middleY,
+                            x2: endRun.x,
+                            y2: middleY
+                        },
+
+                        {
+                            x1: endRun.x,
+                            y1: middleY,
+                            x2: endRun.x,
+                            y2: endRun.y
+                        },
+
+                        {
+                            x1: endRun.x,
+                            y1: endRun.y,
+                            x2: endOutside.x,
+                            y2: endOutside.y
+                        }
+                    ];
+
+
+                    routes.push(
+                        this.simplifyRoute(route)
+                    );
+                }
+            }
         }
 
 
@@ -2008,31 +2385,6 @@ export class CorridorGenerator
 
 
         return length;
-    }
-
-
-    routeScore(
-        route,
-        start,
-        end
-    )
-    {
-        const bends =
-            Math.max(
-                0,
-                route.length - 1
-            );
-
-
-        /*
-         * Prefer shorter routes.
-         *
-         * Strong penalty for additional bends.
-         */
-        return (
-            this.routeLength(route) +
-            bends * 20
-        );
     }
 
 

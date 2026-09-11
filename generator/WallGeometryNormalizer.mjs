@@ -3,23 +3,23 @@ export class WallGeometryNormalizer
     constructor()
     {
         /*
-         * A wall cell is considered a problematic protrusion
-         * when it has only one orthogonal wall neighbour.
-         *
-         * This is intentionally NOT the same as requiring
-         * every directional boundary run to have length >= 2.
-         *
-         * Normal corners and room openings can legitimately
-         * contain single directional boundary edges.
+         * A wall cell with exactly one orthogonal wall neighbour
+         * is a classic one-cell protrusion.
          */
         this.minimumWallNeighbours = 1;
 
         /*
-         * Safety limit.
+         * Maximum number of normalization passes.
          */
         this.maxIterations = 100;
     }
 
+
+    /*
+     * =========================================================
+     * GENERATE
+     * =========================================================
+     */
 
     generate(grid)
     {
@@ -30,9 +30,7 @@ export class WallGeometryNormalizer
         )
         {
             const invalid =
-                this.findInvalidGeometry(
-                    grid
-                );
+                this.findInvalidGeometry(grid);
 
 
             if(invalid.length === 0)
@@ -49,13 +47,10 @@ export class WallGeometryNormalizer
             tiled.log(
                 `[WALL NORMALIZER] ` +
                 `Iteration ${iteration}: ` +
-                `${invalid.length} invalid protrusions`
+                `${invalid.length} invalid wall geometries`
             );
 
 
-            /*
-             * Repair the most constrained protrusion first.
-             */
             const problem =
                 this.selectRepairProblem(
                     invalid
@@ -64,6 +59,12 @@ export class WallGeometryNormalizer
 
             if(!problem)
                 break;
+
+
+            this.logProblemContext(
+                grid,
+                problem
+            );
 
 
             const repair =
@@ -78,7 +79,7 @@ export class WallGeometryNormalizer
                 tiled.log(
                     `[WALL NORMALIZER] ` +
                     `No safe repair for ` +
-                    `protrusion ` +
+                    `${problem.type} ` +
                     `(${problem.x},${problem.y})`
                 );
 
@@ -86,33 +87,54 @@ export class WallGeometryNormalizer
             }
 
 
-            tiled.log(
-                `[WALL NORMALIZER] ` +
-                `Repairing protrusion ` +
-                `(${problem.x},${problem.y}) ` +
-                `-> FLOOR at same cell`
-            );
+            /*
+             * A run repair can contain multiple cells.
+             */
+            if(repair.cells)
+            {
+                tiled.log(
+                    `[WALL NORMALIZER] ` +
+                    `Removing ${repair.cells.length} cells ` +
+                    `from ${problem.type}`
+                );
 
 
-            grid.setFloor(
-                repair.x,
-                repair.y,
-                "WALL_NORMALIZER"
-            );
+                for(const cell of repair.cells)
+                {
+                    grid.setFloor(
+                        cell.x,
+                        cell.y,
+                        "WALL_NORMALIZER"
+                    );
+                }
+            }
+            else
+            {
+                tiled.log(
+                    `[WALL NORMALIZER] ` +
+                    `Removing ${problem.type} ` +
+                    `(${repair.x},${repair.y}) -> FLOOR`
+                );
+
+
+                grid.setFloor(
+                    repair.x,
+                    repair.y,
+                    "WALL_NORMALIZER"
+                );
+            }
         }
 
 
         const remaining =
-            this.findInvalidGeometry(
-                grid
-            );
+            this.findInvalidGeometry(grid);
 
 
         if(remaining.length === 0)
         {
             tiled.log(
-                `[WALL NORMALIZER] ` +
-                `Valid after maximum repair pass`
+                "[WALL NORMALIZER] " +
+                "Valid after maximum repair pass"
             );
 
             return true;
@@ -135,35 +157,9 @@ export class WallGeometryNormalizer
 
 
     /*
-     * ---------------------------------------------------------
-     * Geometry detection
-     * ---------------------------------------------------------
-     *
-     * We no longer collect directional boundary runs.
-     *
-     * A single UP/DOWN/LEFT/RIGHT boundary edge is NOT
-     * automatically considered invalid.
-     *
-     * Instead we look for an actual wall cell which sticks
-     * out by itself.
-     *
-     *
-     * Example of geometry we want to avoid:
-     *
-     *      #####
-     *      #####
-     *      .#...
-     *
-     *                 ^
-     *                 isolated wall cell
-     *
-     *
-     * The problematic wall cell has exactly one orthogonal
-     * wall neighbour.
-     *
-     * This is much closer to the actual visual problem that
-     * the tileset cannot represent.
-     * ---------------------------------------------------------
+     * =========================================================
+     * INVALID GEOMETRY
+     * =========================================================
      */
 
     findInvalidGeometry(grid)
@@ -183,18 +179,12 @@ export class WallGeometryNormalizer
                 x++
             )
             {
-                /*
-                 * Only inspect wall cells.
-                 */
                 if(grid.isFloor(x,y))
                     continue;
 
 
                 /*
-                 * Do not touch room geometry.
-                 *
-                 * Room geometry must be corrected by the
-                 * room generator rather than by this pass.
+                 * Room floors can never be normalized.
                  */
                 if(
                     grid.isRoomFloor &&
@@ -205,6 +195,101 @@ export class WallGeometryNormalizer
                 }
 
 
+                /*
+                 * -------------------------------------------------
+                 * 1. INTERNAL CORRIDOR WALL
+                 * -------------------------------------------------
+                 *
+                 * This is the important new rule.
+                 *
+                 * Example:
+                 *
+                 *     C C C
+                 *     C # C
+                 *     C C C
+                 *
+                 * The # is an internal wall in a corridor.
+                 *
+                 * The old algorithm sees this as a protrusion and
+                 * removes it one tile at a time.
+                 *
+                 * We now detect the complete separator run.
+                 */
+                if(
+                    this.isInternalCorridorWall(
+                        grid,
+                        x,
+                        y
+                    )
+                )
+                {
+                    invalid.push({
+                        type: "INTERNAL_CORRIDOR_WALL",
+                        x,
+                        y
+                    });
+
+                    continue;
+                }
+
+
+                /*
+                 * -------------------------------------------------
+                 * 2. SINGLE-TILE INTERNAL WALL
+                 * -------------------------------------------------
+                 *
+                 * Wall between floor on opposite sides.
+                 *
+                 * We only classify it when corridor geometry is
+                 * involved, preventing normal room boundaries from
+                 * being destroyed.
+                 */
+                if(
+                    this.isSingleTileInternalWall(
+                        grid,
+                        x,
+                        y
+                    )
+                )
+                {
+                    invalid.push({
+                        type: "SINGLE_TILE_INTERNAL_WALL",
+                        x,
+                        y
+                    });
+
+                    continue;
+                }
+
+
+                /*
+                 * -------------------------------------------------
+                 * 3. ISOLATED WALL
+                 * -------------------------------------------------
+                 */
+                if(
+                    this.isIsolatedWall(
+                        grid,
+                        x,
+                        y
+                    )
+                )
+                {
+                    invalid.push({
+                        type: "ISOLATED_WALL",
+                        x,
+                        y
+                    });
+
+                    continue;
+                }
+
+
+                /*
+                 * -------------------------------------------------
+                 * 4. NORMAL PROTRUSION
+                 * -------------------------------------------------
+                 */
                 if(
                     this.isSingleWallProtrusion(
                         grid,
@@ -228,9 +313,283 @@ export class WallGeometryNormalizer
 
 
     /*
-     * ---------------------------------------------------------
-     * Protrusion detection
-     * ---------------------------------------------------------
+     * =========================================================
+     * INTERNAL CORRIDOR WALL
+     * =========================================================
+     */
+
+    isInternalCorridorWall(
+        grid,
+        x,
+        y
+    )
+    {
+        if(grid.isFloor(x,y))
+            return false;
+
+
+        /*
+         * Horizontal separator:
+         *
+         *     FLOOR
+         *     WALL
+         *     FLOOR
+         *
+         * with corridor involved.
+         */
+        const horizontal =
+            grid.isFloor(x - 1,y) &&
+            grid.isFloor(x + 1,y) &&
+            (
+                this.isCorridor(
+                    grid,
+                    x - 1,
+                    y
+                ) ||
+                this.isCorridor(
+                    grid,
+                    x + 1,
+                    y
+                )
+            );
+
+
+        /*
+         * Vertical separator:
+         *
+         *     FLOOR
+         *     WALL
+         *     FLOOR
+         *
+         * vertically.
+         */
+        const vertical =
+            grid.isFloor(x,y - 1) &&
+            grid.isFloor(x,y + 1) &&
+            (
+                this.isCorridor(
+                    grid,
+                    x,
+                    y - 1
+                ) ||
+                this.isCorridor(
+                    grid,
+                    x,
+                    y + 1
+                )
+            );
+
+
+        return horizontal || vertical;
+    }
+
+
+    /*
+     * =========================================================
+     * SINGLE TILE INTERNAL WALL
+     * =========================================================
+     */
+
+    isSingleTileInternalWall(
+        grid,
+        x,
+        y
+    )
+    {
+        if(grid.isFloor(x,y))
+            return false;
+
+
+        /*
+         * Horizontal separator.
+         */
+        if(
+            grid.isFloor(x - 1,y) &&
+            grid.isFloor(x + 1,y)
+        )
+        {
+            /*
+             * If both neighbouring cells are also part of a
+             * horizontal separator, this is a longer run.
+             *
+             * It is handled as a run, not as a single tile.
+             */
+            const leftContinues =
+                this.isHorizontalSeparator(
+                    grid,
+                    x - 1,
+                    y
+                );
+
+
+            const rightContinues =
+                this.isHorizontalSeparator(
+                    grid,
+                    x + 1,
+                    y
+                );
+
+
+            if(
+                !leftContinues &&
+                !rightContinues &&
+                (
+                    this.isCorridor(
+                        grid,
+                        x - 1,
+                        y
+                    ) ||
+                    this.isCorridor(
+                        grid,
+                        x + 1,
+                        y
+                    )
+                )
+            )
+            {
+                return true;
+            }
+        }
+
+
+        /*
+         * Vertical separator.
+         */
+        if(
+            grid.isFloor(x,y - 1) &&
+            grid.isFloor(x,y + 1)
+        )
+        {
+            const upContinues =
+                this.isVerticalSeparator(
+                    grid,
+                    x,
+                    y - 1
+                );
+
+
+            const downContinues =
+                this.isVerticalSeparator(
+                    grid,
+                    x,
+                    y + 1
+                );
+
+
+            if(
+                !upContinues &&
+                !downContinues &&
+                (
+                    this.isCorridor(
+                        grid,
+                        x,
+                        y - 1
+                    ) ||
+                    this.isCorridor(
+                        grid,
+                        x,
+                        y + 1
+                    )
+                )
+            )
+            {
+                return true;
+            }
+        }
+
+
+        return false;
+    }
+
+
+    /*
+     * =========================================================
+     * SEPARATOR HELPERS
+     * =========================================================
+     */
+
+    isHorizontalSeparator(
+        grid,
+        x,
+        y
+    )
+    {
+        if(!this.isInside(grid,x,y))
+            return false;
+
+
+        if(grid.isFloor(x,y))
+            return false;
+
+
+        return (
+            grid.isFloor(x - 1,y) &&
+            grid.isFloor(x + 1,y)
+        );
+    }
+
+
+    isVerticalSeparator(
+        grid,
+        x,
+        y
+    )
+    {
+        if(!this.isInside(grid,x,y))
+            return false;
+
+
+        if(grid.isFloor(x,y))
+            return false;
+
+
+        return (
+            grid.isFloor(x,y - 1) &&
+            grid.isFloor(x,y + 1)
+        );
+    }
+
+
+    /*
+     * =========================================================
+     * ISOLATED WALL
+     * =========================================================
+     */
+
+    isIsolatedWall(
+        grid,
+        x,
+        y
+    )
+    {
+        const up =
+            grid.isWall(x,y - 1);
+
+        const down =
+            grid.isWall(x,y + 1);
+
+        const left =
+            grid.isWall(x - 1,y);
+
+        const right =
+            grid.isWall(x + 1,y);
+
+
+        const neighbours =
+            Number(up) +
+            Number(down) +
+            Number(left) +
+            Number(right);
+
+
+        return neighbours === 0;
+    }
+
+
+    /*
+     * =========================================================
+     * PROTRUSION
+     * =========================================================
      */
 
     isSingleWallProtrusion(
@@ -239,69 +598,82 @@ export class WallGeometryNormalizer
         y
     )
     {
-        /*
-         * Determine which neighbouring cells are walls.
-         */
         const up =
-            !grid.isFloor(
-                x,
-                y - 1
-            );
-
+            grid.isWall(x,y - 1);
 
         const down =
-            !grid.isFloor(
-                x,
-                y + 1
-            );
-
+            grid.isWall(x,y + 1);
 
         const left =
-            !grid.isFloor(
-                x - 1,
-                y
-            );
-
+            grid.isWall(x - 1,y);
 
         const right =
-            !grid.isFloor(
-                x + 1,
-                y
-            );
+            grid.isWall(x + 1,y);
 
 
-        const wallNeighbours =
+        const neighbours =
             Number(up) +
             Number(down) +
             Number(left) +
             Number(right);
 
 
-        /*
-         * A wall cell with exactly one wall neighbour is
-         * an isolated one-tile protrusion.
-         *
-         * Example:
-         *
-         *      #####
-         *      #####
-         *      .#...
-         *
-         *          #
-         *          ^
-         *          only wall neighbour is above
-         */
         return (
-            wallNeighbours ===
+            neighbours ===
             this.minimumWallNeighbours
         );
     }
 
 
     /*
-     * ---------------------------------------------------------
-     * Select repair
-     * ---------------------------------------------------------
+     * =========================================================
+     * CORRIDOR CHECK
+     * =========================================================
+     */
+
+    isCorridor(
+        grid,
+        x,
+        y
+    )
+    {
+        if(!grid.isInside(x,y))
+            return false;
+
+
+        if(!grid.isFloor(x,y))
+            return false;
+
+
+        if(
+            grid.isCorridorFloor
+        )
+        {
+            return grid.isCorridorFloor(
+                x,
+                y
+            );
+        }
+
+
+        const source =
+            grid.getFloorSource(
+                x,
+                y
+            );
+
+
+        return (
+            source === "CORRIDOR" ||
+            source === "CORRIDOR_OPENING"
+        );
+    }
+
+
+    /*
+     * =========================================================
+     * SELECT PROBLEM
+     * =========================================================
      */
 
     selectRepairProblem(invalid)
@@ -310,15 +682,29 @@ export class WallGeometryNormalizer
             return null;
 
 
-        /*
-         * Deterministic ordering.
-         *
-         * Prefer problems closer to the top-left so that
-         * repeated generation/debugging is easier to follow.
-         */
+        const priority =
+            {
+                "INTERNAL_CORRIDOR_WALL": 0,
+                "SINGLE_TILE_INTERNAL_WALL": 1,
+                "ISOLATED_WALL": 2,
+                "PROTRUSION": 3
+            };
+
+
         invalid.sort(
             (a,b) =>
             {
+                const pa =
+                    priority[a.type] ?? 99;
+
+                const pb =
+                    priority[b.type] ?? 99;
+
+
+                if(pa !== pb)
+                    return pa - pb;
+
+
                 if(a.y !== b.y)
                     return a.y - b.y;
 
@@ -333,9 +719,9 @@ export class WallGeometryNormalizer
 
 
     /*
-     * ---------------------------------------------------------
-     * Local repair
-     * ---------------------------------------------------------
+     * =========================================================
+     * REPAIR
+     * =========================================================
      */
 
     findLocalRepair(
@@ -343,336 +729,608 @@ export class WallGeometryNormalizer
         problem
     )
     {
-        const candidates =
-            this.generateLocalCandidates(
+        /*
+         * Internal corridor wall:
+         *
+         * remove the COMPLETE contiguous separator.
+         */
+        if(
+            problem.type ===
+            "INTERNAL_CORRIDOR_WALL"
+        )
+        {
+            const cells =
+                this.findSeparatorRun(
+                    grid,
+                    problem.x,
+                    problem.y
+                );
+
+
+            if(cells.length === 0)
+                return null;
+
+
+            if(
+                !this.isSafeRunRepair(
+                    grid,
+                    cells
+                )
+            )
+            {
+                return null;
+            }
+
+
+            return {
+                cells
+            };
+        }
+
+
+        /*
+         * Single-tile internal wall.
+         */
+        if(
+            problem.type ===
+            "SINGLE_TILE_INTERNAL_WALL"
+        )
+        {
+            return {
+                x: problem.x,
+                y: problem.y
+            };
+        }
+
+
+        /*
+         * Isolated wall/protrusion.
+         */
+        return {
+            x: problem.x,
+            y: problem.y
+        };
+    }
+
+
+    /*
+     * =========================================================
+     * FIND COMPLETE SEPARATOR RUN
+     * =========================================================
+     */
+
+    findSeparatorRun(
+        grid,
+        startX,
+        startY
+    )
+    {
+        const horizontal =
+            this.isHorizontalSeparator(
                 grid,
-                problem
+                startX,
+                startY
             );
 
 
-        let best = null;
-
-
-        const before =
-            this.findInvalidGeometry(
-                grid
+        const vertical =
+            this.isVerticalSeparator(
+                grid,
+                startX,
+                startY
             );
+
+
+        /*
+         * If both are possible, choose the direction containing
+         * corridor geometry.
+         */
+        if(
+            horizontal &&
+            !vertical
+        )
+        {
+            return this.collectHorizontalRun(
+                grid,
+                startX,
+                startY
+            );
+        }
+
+
+        if(
+            vertical &&
+            !horizontal
+        )
+        {
+            return this.collectVerticalRun(
+                grid,
+                startX,
+                startY
+            );
+        }
+
+
+        if(horizontal)
+        {
+            const horizontalRun =
+                this.collectHorizontalRun(
+                    grid,
+                    startX,
+                    startY
+                );
+
+
+            const verticalRun =
+                this.collectVerticalRun(
+                    grid,
+                    startX,
+                    startY
+                );
+
+
+            const horizontalCorridor =
+                horizontalRun.filter(
+                    cell =>
+                        this.hasCorridorNeighbour(
+                            grid,
+                            cell.x,
+                            cell.y
+                        )
+                ).length;
+
+
+            const verticalCorridor =
+                verticalRun.filter(
+                    cell =>
+                        this.hasCorridorNeighbour(
+                            grid,
+                            cell.x,
+                            cell.y
+                        )
+                ).length;
+
+
+            if(
+                horizontalCorridor >=
+                verticalCorridor
+            )
+            {
+                return horizontalRun;
+            }
+
+
+            return verticalRun;
+        }
+
+
+        return [];
+    }
+
+
+    /*
+     * =========================================================
+     * HORIZONTAL RUN
+     * =========================================================
+     */
+
+    collectHorizontalRun(
+        grid,
+        x,
+        y
+    )
+    {
+        const cells = [];
+
+
+        let left = x;
+
+
+        while(
+            this.isHorizontalSeparator(
+                grid,
+                left - 1,
+                y
+            )
+            )
+        {
+            left--;
+        }
+
+
+        let right = x;
+
+
+        while(
+            this.isHorizontalSeparator(
+                grid,
+                right + 1,
+                y
+            )
+            )
+        {
+            right++;
+        }
 
 
         for(
-            const candidate of candidates
+            let current = left;
+            current <= right;
+            current++
+        )
+        {
+            if(
+                this.isHorizontalSeparator(
+                    grid,
+                    current,
+                    y
+                )
+            )
+            {
+                cells.push({
+                    x: current,
+                    y
+                });
+            }
+        }
+
+
+        return cells;
+    }
+
+
+    /*
+     * =========================================================
+     * VERTICAL RUN
+     * =========================================================
+     */
+
+    collectVerticalRun(
+        grid,
+        x,
+        y
+    )
+    {
+        const cells = [];
+
+
+        let top = y;
+
+
+        while(
+            this.isVerticalSeparator(
+                grid,
+                x,
+                top - 1
+            )
             )
         {
-            /*
-             * Must be inside the grid.
-             */
+            top--;
+        }
+
+
+        let bottom = y;
+
+
+        while(
+            this.isVerticalSeparator(
+                grid,
+                x,
+                bottom + 1
+            )
+            )
+        {
+            bottom++;
+        }
+
+
+        for(
+            let current = top;
+            current <= bottom;
+            current++
+        )
+        {
             if(
-                !this.isInside(
+                this.isVerticalSeparator(
                     grid,
-                    candidate.x,
-                    candidate.y
+                    x,
+                    current
                 )
             )
             {
-                continue;
+                cells.push({
+                    x,
+                    y: current
+                });
             }
+        }
 
 
+        return cells;
+    }
+
+
+    /*
+     * =========================================================
+     * SAFETY CHECK FOR RUN
+     * =========================================================
+     */
+
+    isSafeRunRepair(
+        grid,
+        cells
+    )
+    {
+        if(cells.length === 0)
+            return false;
+
+
+        for(const cell of cells)
+        {
             /*
-             * NEVER modify the outside border.
+             * Never modify border.
              */
             if(
-                candidate.x === 0 ||
-                candidate.y === 0 ||
-                candidate.x === grid.width - 1 ||
-                candidate.y === grid.height - 1
+                cell.x <= 0 ||
+                cell.y <= 0 ||
+                cell.x >= grid.width - 1 ||
+                cell.y >= grid.height - 1
             )
             {
-                continue;
+                return false;
             }
 
 
             /*
-             * Candidate must currently be wall.
-             */
-            if(
-                grid.isFloor(
-                    candidate.x,
-                    candidate.y
-                )
-            )
-            {
-                continue;
-            }
-
-
-            /*
-             * NEVER modify an existing room floor.
+             * Never modify a room floor.
              *
-             * Room geometry should be fixed at the source.
+             * This is mostly defensive because cells should
+             * already be WALL.
              */
             if(
                 grid.isRoomFloor &&
                 grid.isRoomFloor(
-                    candidate.x,
-                    candidate.y
+                    cell.x,
+                    cell.y
                 )
             )
             {
-                continue;
+                return false;
             }
 
 
             /*
-             * Simulate the repair.
+             * Every cell in an internal corridor wall must
+             * actually have corridor involvement.
              */
-            grid.setFloor(
-                candidate.x,
-                candidate.y,
-                "WALL_NORMALIZER"
-            );
-
-
-            const after =
-                this.findInvalidGeometry(
-                    grid
-                );
-
-
-            /*
-             * Restore the candidate.
-             */
-            grid.setWall(
-                candidate.x,
-                candidate.y
-            );
-
-
-            const score =
-                this.scoreRepair(
-                    problem,
-                    candidate,
-                    before,
-                    after
-                );
-
-
-            if(score === Infinity)
-                continue;
-
-
             if(
-                !best ||
-                score < best.score
+                !this.hasCorridorNeighbour(
+                    grid,
+                    cell.x,
+                    cell.y
+                )
             )
             {
-                best = {
-                    x: candidate.x,
-                    y: candidate.y,
-                    score
-                };
+                return false;
             }
         }
 
 
-        return best;
+        return true;
     }
 
 
     /*
-     * ---------------------------------------------------------
-     * Candidate generation
-     * ---------------------------------------------------------
+     * =========================================================
+     * CORRIDOR NEIGHBOUR
+     * =========================================================
      */
 
-    generateLocalCandidates(
+    hasCorridorNeighbour(
         grid,
-        problem
-    )
-    {
-        const candidates = [];
-
-        const x = problem.x;
-        const y = problem.y;
-
-
-        /*
-         * Determine the wall neighbours of the protrusion.
-         *
-         * The protrusion itself has exactly one wall neighbour.
-         * We MUST remove the protrusion by extending the floor
-         * into the side where that wall neighbour lies.
-         *
-         * Example:
-         *
-         *      #####
-         *      #####
-         *      .#...
-         *
-         *          ^
-         *          protrusion
-         *
-         * The wall neighbour is above.
-         *
-         * Therefore the repair cell is the protrusion itself,
-         * not an arbitrary neighbouring wall.
-         *
-         * However, because the current problem coordinates refer
-         * to the isolated WALL CELL, the actual repair is simply
-         * to turn THAT CELL into floor.
-         */
-
-
-        /*
-         * The safest repair is the protrusion itself.
-         *
-         * We do not carve an adjacent cell.
-         */
-        candidates.push({
-            x,
-            y
-        });
-
-
-        return candidates;
-    }
-
-
-    /*
-     * ---------------------------------------------------------
-     * Repair scoring
-     * ---------------------------------------------------------
-     */
-
-    scoreRepair(
-        problem,
-        candidate,
-        before,
-        after
-    )
-    {
-        /*
-         * A repair must NEVER increase the number of
-         * problematic protrusions.
-         */
-        if(
-            after.length >
-            before.length
-        )
-        {
-            return Infinity;
-        }
-
-
-        let score = 0;
-
-
-        /*
-         * Strongly reward removing the original problem.
-         *
-         * If the original protrusion still exists after
-         * the simulated repair, this candidate is poor.
-         */
-        let originalStillExists = false;
-
-
-        for(
-            const remaining of after
-            )
-        {
-            if(
-                remaining.type ===
-                "PROTRUSION" &&
-                remaining.x === problem.x &&
-                remaining.y === problem.y
-            )
-            {
-                originalStillExists = true;
-                break;
-            }
-        }
-
-
-        if(originalStillExists)
-        {
-            score += 10000;
-        }
-        else
-        {
-            score -= 10000;
-        }
-
-
-        /*
-         * Strongly prefer fewer remaining problems.
-         */
-        score +=
-            after.length * 100;
-
-
-        /*
-         * Prefer candidates close to the original
-         * protrusion.
-         */
-        score +=
-            this.distancePenalty(
-                candidate,
-                problem
-            );
-
-
-        /*
-         * Avoid creating another isolated wall cell.
-         *
-         * This is evaluated against the simulated result.
-         */
-        for(
-            const remaining of after
-            )
-        {
-            if(
-                remaining.x === candidate.x &&
-                remaining.y === candidate.y
-            )
-            {
-                score += 5000;
-            }
-        }
-
-
-        return score;
-    }
-
-
-    /*
-     * ---------------------------------------------------------
-     * Distance
-     * ---------------------------------------------------------
-     */
-
-    distancePenalty(
-        candidate,
-        problem
+        x,
+        y
     )
     {
         return (
-            Math.abs(
-                candidate.x -
-                problem.x
-            ) +
-            Math.abs(
-                candidate.y -
-                problem.y
+            this.isCorridor(
+                grid,
+                x - 1,
+                y
+            ) ||
+            this.isCorridor(
+                grid,
+                x + 1,
+                y
+            ) ||
+            this.isCorridor(
+                grid,
+                x,
+                y - 1
+            ) ||
+            this.isCorridor(
+                grid,
+                x,
+                y + 1
             )
         );
     }
 
 
     /*
-     * ---------------------------------------------------------
-     * Logging
-     * ---------------------------------------------------------
+     * =========================================================
+     * CORRIDOR EXPANSION
+     * =========================================================
+     *
+     * Kept for compatibility with the previous implementation.
      */
+
+    getCorridorExpansion(
+        grid,
+        x,
+        y
+    )
+    {
+        let neighbours = 0;
+
+
+        if(
+            this.isCorridor(
+                grid,
+                x - 1,
+                y
+            )
+        )
+        {
+            neighbours++;
+        }
+
+
+        if(
+            this.isCorridor(
+                grid,
+                x + 1,
+                y
+            )
+        )
+        {
+            neighbours++;
+        }
+
+
+        if(
+            this.isCorridor(
+                grid,
+                x,
+                y - 1
+            )
+        )
+        {
+            neighbours++;
+        }
+
+
+        if(
+            this.isCorridor(
+                grid,
+                x,
+                y + 1
+            )
+        )
+        {
+            neighbours++;
+        }
+
+
+        if(neighbours <= 2)
+            return 0;
+
+
+        return neighbours - 2;
+    }
+
+
+    /*
+     * =========================================================
+     * DEBUG
+     * =========================================================
+     */
+
+    logProblemContext(
+        grid,
+        problem
+    )
+    {
+        const x = problem.x;
+        const y = problem.y;
+
+
+        const describe =
+            (nx,ny) =>
+            {
+                if(
+                    !grid.isInside(
+                        nx,
+                        ny
+                    )
+                )
+                {
+                    return "OUTSIDE";
+                }
+
+
+                if(grid.isFloor(nx,ny))
+                {
+                    if(
+                        this.isCorridor(
+                            grid,
+                            nx,
+                            ny
+                        )
+                    )
+                    {
+                        return "FLOOR / CORRIDOR";
+                    }
+
+
+                    if(
+                        grid.isRoomFloor &&
+                        grid.isRoomFloor(
+                            nx,
+                            ny
+                        )
+                    )
+                    {
+                        return "FLOOR / ROOM";
+                    }
+
+
+                    return (
+                        "FLOOR / " +
+                        grid.getFloorSource(
+                            nx,
+                            ny
+                        )
+                    );
+                }
+
+
+                return "WALL";
+            };
+
+
+        tiled.log(
+            `[WALL NORMALIZER] ` +
+            `Context for ${problem.type} ` +
+            `(${x},${y}):`
+        );
+
+
+        tiled.log(
+            `  up    = ${describe(x,y - 1)}`
+        );
+
+
+        tiled.log(
+            `  down  = ${describe(x,y + 1)}`
+        );
+
+
+        tiled.log(
+            `  left  = ${describe(x - 1,y)}`
+        );
+
+
+        tiled.log(
+            `  right = ${describe(x + 1,y)}`
+        );
+
+
+        tiled.log(
+            `  source = ${grid.getFloorSource(x,y)}`
+        );
+    }
+
 
     logInvalidGeometry(invalid)
     {
@@ -681,8 +1339,8 @@ export class WallGeometryNormalizer
             )
         {
             tiled.log(
-                `[WALL NORMALIZER] INVALID ` +
-                `PROTRUSION ` +
+                `[WALL NORMALIZER] ` +
+                `INVALID ${problem.type} ` +
                 `at (${problem.x},${problem.y})`
             );
         }
@@ -690,9 +1348,9 @@ export class WallGeometryNormalizer
 
 
     /*
-     * ---------------------------------------------------------
-     * Helpers
-     * ---------------------------------------------------------
+     * =========================================================
+     * HELPERS
+     * =========================================================
      */
 
     isInside(
