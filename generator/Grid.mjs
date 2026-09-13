@@ -40,6 +40,12 @@ export class Grid {
                 () =>
                     Array(width).fill(WallTile.INSIDE)
             );
+
+        this.details =
+            Array.from(
+                {length: height},
+                () => Array(width).fill(null)
+            );
     }
 
 
@@ -162,5 +168,28 @@ export class Grid {
     getWallVariant(x,y)
     {
         return this.wallTiles[y][x];
+    }
+
+    setDetail(x,y,tile)
+    {
+        if(this.isInside(x,y))
+        {
+            this.details[y][x] = tile;
+        }
+    }
+
+
+    getDetail(x,y)
+    {
+        if(!this.isInside(x,y))
+            return null;
+
+        return this.details[y][x];
+    }
+
+
+    hasDetail(x,y)
+    {
+        return this.getDetail(x,y) !== null;
     }
 }

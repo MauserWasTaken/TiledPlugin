@@ -1,38 +1,118 @@
-import { RoomGenerator } from "../generator/RoomGenerator.mjs";
 import { TileWriter } from "../generator/TileWriter.mjs";
 import { Grid } from "../generator/Grid.mjs";
 import { WallVariantGenerator } from "../generator/WallVariantGenerator.mjs";
 import { BrickGenerator } from "../generator/BrickGenerator.mjs";
-import {RoomWallBuilder} from "../generator/RoomWallBuilder.mjs";
-import {WallTile} from "../generator/WallTile.mjs";
-import {BSPGenerator} from "../generator/BSPGenerator.mjs";
-import {WallGeometryNormalizer} from "../generator/WallGeometryNormalizer.mjs";
+import { RoomWallBuilder } from "../generator/RoomWallBuilder.mjs";
+import { BSPGenerator } from "../generator/BSPGenerator.mjs";
+import { WallGeometryNormalizer } from "../generator/WallGeometryNormalizer.mjs";
+import { DetailGenerator } from "../generator/DetailGenerator.mjs";
+
+
+function getOrCreateDetailLayer(map, dungeonLayer)
+{
+    let detailLayer = null;
+
+    for(const layer of map.layers)
+    {
+        if(layer.name === "Details")
+        {
+            detailLayer = layer;
+            break;
+        }
+    }
+
+
+    if(!detailLayer)
+    {
+        detailLayer = new TileLayer();
+
+        detailLayer.name = "Details";
+
+        map.addLayer(
+            detailLayer
+        );
+
+        tiled.log(
+            "[DUNGEON] Created Details layer."
+        );
+    }
+
+
+    /*
+     * Make sure Details is above the dungeon layer.
+     */
+    const dungeonIndex =
+        map.layers.indexOf(
+            dungeonLayer
+        );
+
+    const detailIndex =
+        map.layers.indexOf(
+            detailLayer
+        );
+
+
+    if(detailIndex < dungeonIndex)
+    {
+        map.removeLayer(
+            detailLayer
+        );
+
+        map.insertLayer(
+            dungeonIndex + 1,
+            detailLayer
+        );
+    }
+
+
+    return detailLayer;
+}
 
 
 export function generateDungeon()
 {
     let map = tiled.activeAsset;
 
-    let layer = map.layers[0];
+    let dungeonLayer =
+        map.layers[0];
 
-    let tileset = map.tilesets[0];
+
+    let detailLayer =
+        getOrCreateDetailLayer(
+            map,
+            dungeonLayer
+        );
+
+
+    let tileset =
+        map.tilesets[0];
 
 
     let floorTile =
         tileset.tiles[48];
 
 
-    let wallTile =
-        tileset.tiles[0];
+    /*
+     * Separate writers:
+     *
+     * dungeonWriter -> floor + walls
+     * detailWriter  -> details only
+     */
+    let dungeonWriter =
+        new TileWriter(
+            dungeonLayer
+        );
 
 
+    let detailWriter =
+        new TileWriter(
+            detailLayer
+        );
 
-    let writer =
-        new TileWriter(layer);
 
-
-
-    // Logical dungeon grid
+    /*
+     * Logical dungeon grid
+     */
     let grid =
         new Grid(
             map.width,
@@ -40,25 +120,29 @@ export function generateDungeon()
         );
 
 
+    /*
+     * Generate BSP dungeon
+     */
+    const bsp =
+        new BSPGenerator();
 
-    // Generate rooms
-    let roomGenerator =
-        new RoomGenerator(
+
+    const result =
+        bsp.generate(
             grid
         );
 
 
-    const bsp = new BSPGenerator();
-
-    const result = bsp.generate(grid);
-
-    // NEW
     bsp.connectRooms(
         result.root,
         grid
     );
 
-    tiled.log("[DEBUG] FLOOR MAP BEFORE NORMALIZER");
+
+    tiled.log(
+        "[DEBUG] FLOOR MAP BEFORE NORMALIZER"
+    );
+
 
     for(let y = 0; y < grid.height; y++)
     {
@@ -66,17 +150,28 @@ export function generateDungeon()
 
         for(let x = 0; x < grid.width; x++)
         {
-            row += grid.isFloor(x,y) ? "." : "#";
+            row +=
+                grid.isFloor(x,y)
+                    ? "."
+                    : "#";
         }
 
         tiled.log(row);
     }
 
+
+    /*
+     * Normalize wall geometry
+     */
     const normalizer =
         new WallGeometryNormalizer();
 
+
     const normalized =
-        normalizer.generate(grid);
+        normalizer.generate(
+            grid
+        );
+
 
     if(!normalized)
     {
@@ -87,8 +182,15 @@ export function generateDungeon()
         return;
     }
 
+
+    /*
+     * Validate final geometry
+     */
     const invalid =
-        normalizer.findInvalidGeometry(grid);
+        normalizer.findInvalidGeometry(
+            grid
+        );
+
 
     if(invalid.length !== 0)
     {
@@ -103,25 +205,22 @@ export function generateDungeon()
         return;
     }
 
-    for(let y = 0; y < grid.height; y++)
-    {
-        let row = "";
 
-        for(let x = 0; x < grid.width; x++)
-        {
-            row += grid.isFloor(x,y) ? "." : "#";
-        }
-
-        tiled.log(row);
-    }
-
+    /*
+     * Build walls
+     */
     let wallBuilder =
         new RoomWallBuilder();
 
 
+    wallBuilder.generate(
+        grid
+    );
 
-    wallBuilder.generate(grid);
 
+    /*
+     * Generate wall variants
+     */
     let wallGenerator =
         new WallVariantGenerator();
 
@@ -130,6 +229,10 @@ export function generateDungeon()
         grid
     );
 
+
+    /*
+     * Generate bricks
+     */
     let brickGenerator =
         new BrickGenerator();
 
@@ -139,15 +242,35 @@ export function generateDungeon()
     );
 
 
-    // Convert grid to Tiled tiles
+    /*
+     * Generate details
+     */
+    const detailGenerator =
+        new DetailGenerator();
+
+
+    detailGenerator.generate(
+        grid,
+        result.rooms
+    );
+
+
+    /*
+     * Write dungeon and details
+     * to separate layers.
+     */
     for(let y = 0; y < grid.height; y++)
     {
         for(let x = 0; x < grid.width; x++)
         {
-
+            /*
+             * DUNGEON LAYER
+             *
+             * Always write floor/wall here.
+             */
             if(grid.isFloor(x,y))
             {
-                writer.setTile(
+                dungeonWriter.setTile(
                     x,
                     y,
                     floorTile
@@ -155,23 +278,49 @@ export function generateDungeon()
             }
             else
             {
-                let variant =
+                const variant =
                     grid.getWallVariant(
                         x,
                         y
                     );
 
-
-                writer.setTile(
+                dungeonWriter.setTile(
                     x,
                     y,
                     tileset.tiles[variant]
+                );
+            }
+
+
+            /*
+             * DETAILS LAYER
+             *
+             * Only write something when
+             * a detail exists.
+             */
+            const detail =
+                grid.getDetail(
+                    x,
+                    y
+                );
+
+
+            if(detail !== null)
+            {
+                detailWriter.setTile(
+                    x,
+                    y,
+                    tileset.tiles[detail]
                 );
             }
         }
     }
 
 
+    /*
+     * Apply both layers.
+     */
+    dungeonWriter.apply();
 
-    writer.apply();
+    detailWriter.apply();
 }
