@@ -298,15 +298,22 @@ export class BSPGenerator
 
         // Middle rooms have a 20% chance
         // of becoming TREASURE rooms
+        // and a 20% chance of becoming BLACKSMITH rooms
         for(
             let i = 1;
             i < rooms.length - 1;
             i++
         )
         {
-            if(Math.random() < 0.2)
+            const roll = Math.random();
+
+            if(roll < 0.2)
             {
                 rooms[i].type = "TREASURE";
+            }
+            else if(roll < 0.4)
+            {
+                rooms[i].type = "BLACKSMITH";
             }
         }
     }

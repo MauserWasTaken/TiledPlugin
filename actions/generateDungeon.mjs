@@ -109,6 +109,8 @@ export function generateDungeon()
             detailLayer
         );
 
+    dungeonWriter.clear();
+    detailWriter.clear();
 
     /*
      * Logical dungeon grid

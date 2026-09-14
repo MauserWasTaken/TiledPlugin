@@ -29,6 +29,13 @@ export class DetailGenerator
                     );
                     break;
 
+                case "BLACKSMITH":
+                    this.generateBlacksmithRoom(
+                        grid,
+                        room
+                    );
+                    break;
+
                 case "NORMAL":
                 default:
                     this.generateNormalRoom(
@@ -40,13 +47,17 @@ export class DetailGenerator
         }
     }
 
+
     findRoomCenter(grid, room)
     {
         const centerX = room.centerX;
         const centerY = room.centerY;
 
         if(
-            grid.isRoomFloor(centerX, centerY)
+            grid.isRoomFloor(
+                centerX,
+                centerY
+            )
         )
         {
             return {
@@ -57,6 +68,7 @@ export class DetailGenerator
 
         return null;
     }
+
 
     findRoomPosition(grid, room)
     {
@@ -101,7 +113,8 @@ export class DetailGenerator
             ];
     }
 
-    generateTreasureRoom(grid, room)
+
+    placeDetail(grid, room, tile)
     {
         const position =
             this.findRoomPosition(
@@ -110,30 +123,124 @@ export class DetailGenerator
             );
 
         if(!position)
-            return;
+            return false;
 
         grid.setDetail(
             position.x,
             position.y,
+            tile
+        );
+
+        return true;
+    }
+
+    randomInt(min, max)
+    {
+        return Math.floor(
+            Math.random() *
+            (max - min + 1)
+        ) + min;
+    }
+
+    generateTreasureRoom(grid, room)
+    {
+        this.placeDetail(
+            grid,
+            room,
             DetailTile.CHEST_CLOSED
         );
+
+        const count =
+            this.randomInt(1, 2);
+
+        for(let i = 0; i < count; i++)
+        {
+            this.placeDetail(
+                grid,
+                room,
+                DetailTile.BOX
+            );
+        }
     }
 
 
     generateStartRoom(grid, room)
     {
-        // Start room logic.
+        this.placeDetail(
+            grid,
+            room,
+            DetailTile.TABLE
+        );
+
+        this.placeDetail(
+            grid,
+            room,
+            DetailTile.STOOL
+        );
+    }
+
+    generateBlacksmithRoom(grid, room)
+    {
+        this.placeDetail(
+            grid,
+            room,
+            DetailTile.ANVIL
+        );
+
+        this.placeDetail(
+            grid,
+            room,
+            DetailTile.TABLE
+        );
     }
 
 
     generateExitRoom(grid, room)
     {
-        // Exit room logic.
+        const center =
+            this.findRoomCenter(
+                grid,
+                room
+            );
+
+        if(!center)
+            return;
+
+        grid.setDetail(
+            center.x,
+            center.y,
+            DetailTile.TOMBSTONE_CROSS
+        );
     }
 
 
     generateNormalRoom(grid, room)
     {
-        // Normal room logic.
+        const roll = Math.random();
+
+        if(roll < 0.20)
+        {
+            this.placeDetail(
+                grid,
+                room,
+                DetailTile.BARREL
+            );
+        }
+        else if(roll < 0.35)
+        {
+            this.placeDetail(
+                grid,
+                room,
+                DetailTile.BOX
+            );
+        }
+        else if(roll < 0.45)
+        {
+            this.placeDetail(
+                grid,
+                room,
+                DetailTile.SACK
+            );
+        }
     }
 }

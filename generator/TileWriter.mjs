@@ -17,11 +17,39 @@ export class TileWriter {
     }
 
 
+    clear()
+    {
+        let edit = this.layer.edit();
+
+        for(
+            let y = 0;
+            y < this.layer.height;
+            y++
+        )
+        {
+            for(
+                let x = 0;
+                x < this.layer.width;
+                x++
+            )
+            {
+                edit.setTile(
+                    x,
+                    y,
+                    null
+                );
+            }
+        }
+
+        edit.apply();
+    }
+
+
     apply()
     {
         let edit = this.layer.edit();
 
-        for(let op of this.operations)
+        for(const op of this.operations)
         {
             edit.setTile(
                 op.x,
