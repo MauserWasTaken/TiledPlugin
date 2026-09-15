@@ -239,7 +239,7 @@ export class DetailGenerator
             this.placeDetail(
                 grid,
                 room,
-                DetailTile.SACK
+                DetailTile.SPIKE
             );
         }
     }
