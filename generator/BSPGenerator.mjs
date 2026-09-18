@@ -2,9 +2,15 @@ import { BSPNode } from "./BSPNode.mjs";
 import { Room } from "./Room.mjs";
 import { CorridorGenerator } from "./CorridorGenerator.mjs";
 import {RoomGenerator} from "./RoomGenerator.mjs";
+import { DungeonConfig } from "./DungeonConfig.mjs";
 
 export class BSPGenerator
 {
+    constructor(config = new DungeonConfig())
+    {
+        this.config = config;
+    }
+
     generate(grid)
     {
         const root = new BSPNode(
@@ -43,7 +49,8 @@ export class BSPGenerator
 
     split(node)
     {
-        const minSize = 16;
+        const minSize =
+            this.config.minimumPartitionSize;
 
 
         if(
@@ -120,9 +127,14 @@ export class BSPGenerator
     {
         if(node.isLeaf())
         {
-            const padding = 2;
-            const minRoomSize = 8;
-            const maxAspectRatio = 1.5;
+            const padding =
+                this.config.roomPadding;
+
+            const minRoomSize =
+                this.config.minimumRoomSize;
+
+            const maxAspectRatio =
+                this.config.maximumRoomAspectRatio;
 
 
             const maxRoomWidth =
@@ -145,14 +157,19 @@ export class BSPGenerator
             let roomWidth =
                 Math.floor(
                     maxRoomWidth *
-                    this.randomRange(0.70, 0.95)
+                    this.randomRange(
+                        this.config.minimumRoomFill,
+                        this.config.maximumRoomFill
+                    )
                 );
-
 
             let roomHeight =
                 Math.floor(
                     maxRoomHeight *
-                    this.randomRange(0.70, 0.95)
+                    this.randomRange(
+                        this.config.minimumRoomFill,
+                        this.config.maximumRoomFill
+                    )
                 );
 
 
@@ -222,13 +239,21 @@ export class BSPGenerator
 
             let shape;
 
-            const shapeRoll = this.randomInt(0, 99);
+            const shapeRoll =
+                this.randomInt(1, 100);
 
-            if(shapeRoll <= 60)
+            if(
+                shapeRoll <=
+                this.config.rectangleChance
+            )
             {
                 shape = "RECTANGLE";
             }
-            else if(shapeRoll <= 80)
+            else if(
+                shapeRoll <=
+                this.config.rectangleChance +
+                this.config.circleChance
+            )
             {
                 shape = "CIRCLE";
             }
@@ -305,13 +330,21 @@ export class BSPGenerator
             i++
         )
         {
-            const roll = Math.random();
+            const roll =
+                this.randomInt(1, 100);
 
-            if(roll < 0.2)
+            if(
+                roll <=
+                this.config.treasureChance
+            )
             {
                 rooms[i].type = "TREASURE";
             }
-            else if(roll < 0.4)
+            else if(
+                roll <=
+                this.config.treasureChance +
+                this.config.blacksmithChance
+            )
             {
                 rooms[i].type = "BLACKSMITH";
             }
@@ -405,7 +438,7 @@ export class BSPGenerator
                     grid,
                     roomA,
                     roomB,
-                    2
+                    this.config.corridorWidth
                 );
             }
         }

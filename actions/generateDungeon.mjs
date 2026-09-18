@@ -6,6 +6,7 @@ import { RoomWallBuilder } from "../generator/RoomWallBuilder.mjs";
 import { BSPGenerator } from "../generator/BSPGenerator.mjs";
 import { WallGeometryNormalizer } from "../generator/WallGeometryNormalizer.mjs";
 import { DetailGenerator } from "../generator/DetailGenerator.mjs";
+import { DungeonConfig } from "../generator/DungeonConfig.mjs";
 
 
 function getOrCreateDetailLayer(map, dungeonLayer)
@@ -71,6 +72,8 @@ function getOrCreateDetailLayer(map, dungeonLayer)
 
 export function generateDungeon()
 {
+    let config = new DungeonConfig()
+
     let map = tiled.activeAsset;
 
     let dungeonLayer =
@@ -126,7 +129,7 @@ export function generateDungeon()
      * Generate BSP dungeon
      */
     const bsp =
-        new BSPGenerator();
+        new BSPGenerator(config);
 
 
     const result =
@@ -236,7 +239,9 @@ export function generateDungeon()
      * Generate bricks
      */
     let brickGenerator =
-        new BrickGenerator();
+        new BrickGenerator(
+            config
+        );
 
 
     brickGenerator.generate(
