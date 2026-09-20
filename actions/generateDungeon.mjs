@@ -52,7 +52,6 @@ function getOrCreateDetailLayer(map, dungeonLayer)
             detailLayer
         );
 
-
     if(detailIndex < dungeonIndex)
     {
         map.removeLayer(
