@@ -14,8 +14,8 @@ export class DungeonConfig
         this.minimumRoomSize = 8;
         this.roomPadding = 2;
 
-        this.minimumRoomFill = 0.70;
-        this.maximumRoomFill = 0.95;
+        this.minimumRoomFill = 70;
+        this.maximumRoomFill = 95;
 
         this.maximumRoomAspectRatio = 1.5;
 

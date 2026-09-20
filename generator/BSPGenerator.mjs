@@ -158,8 +158,8 @@ export class BSPGenerator
                 Math.floor(
                     maxRoomWidth *
                     this.randomRange(
-                        this.config.minimumRoomFill,
-                        this.config.maximumRoomFill
+                        this.config.minimumRoomFill/100,
+                        this.config.maximumRoomFill/100
                     )
                 );
 
@@ -167,8 +167,8 @@ export class BSPGenerator
                 Math.floor(
                     maxRoomHeight *
                     this.randomRange(
-                        this.config.minimumRoomFill,
-                        this.config.maximumRoomFill
+                        this.config.minimumRoomFill/100,
+                        this.config.maximumRoomFill/100
                     )
                 );
 

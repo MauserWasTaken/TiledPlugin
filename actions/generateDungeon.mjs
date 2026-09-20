@@ -70,10 +70,8 @@ function getOrCreateDetailLayer(map, dungeonLayer)
 }
 
 
-export function generateDungeon()
+export function generateDungeon(config)
 {
-    let config = new DungeonConfig()
-
     let map = tiled.activeAsset;
 
     let dungeonLayer =
