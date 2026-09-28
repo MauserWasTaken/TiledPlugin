@@ -1,7 +1,8 @@
 export class CorridorGenerator
 {
-    constructor()
+    constructor(random)
     {
+        this.random = random;
         /*
          * Corridors are always two tiles wide.
          */
@@ -321,9 +322,9 @@ export class CorridorGenerator
 
         const selected =
             acceptableRoutes[
-                Math.floor(
-                    Math.random() *
-                    acceptableRoutes.length
+                this.random.randomInt(
+                    0,
+                    acceptableRoutes.length - 1
                 )
                 ];
 

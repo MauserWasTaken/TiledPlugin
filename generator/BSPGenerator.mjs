@@ -4,11 +4,15 @@ import { CorridorGenerator } from "./CorridorGenerator.mjs";
 import {RoomGenerator} from "./RoomGenerator.mjs";
 import { DungeonConfig } from "./DungeonConfig.mjs";
 
-export class BSPGenerator
+class BSPGenerator
 {
-    constructor(config = new DungeonConfig())
+    constructor(
+        config = new DungeonConfig(),
+        random
+    )
     {
         this.config = config;
+        this.random = random;
     }
 
     generate(grid)
@@ -275,7 +279,11 @@ export class BSPGenerator
             node.room = room;
             rooms.push(room);
 
-            const generator = new RoomGenerator(grid);
+            const generator =
+                new RoomGenerator(
+                    grid,
+                    this.random
+                );
             generator.carveRoom(room);
 
 
@@ -354,20 +362,20 @@ export class BSPGenerator
 
     randomInt(min, max)
     {
-        return Math.floor(
-            Math.random() *
-            (max - min + 1)
-        ) + min;
+        return this.random.randomInt(
+            min,
+            max
+        );
     }
 
 
     randomRange(min, max)
     {
-        return Math.random() *
-            (max - min) +
-            min;
+        return this.random.randomFloat(
+            min,
+            max
+        );
     }
-
 
     connectRooms(node, grid)
     {
@@ -431,7 +439,9 @@ export class BSPGenerator
             if(roomA && roomB)
             {
                 const corridor =
-                    new CorridorGenerator();
+                    new CorridorGenerator(
+                        this.random
+                    );
 
 
                 corridor.connect(
@@ -530,9 +540,9 @@ export class BSPGenerator
 
 
         return rooms[
-            Math.floor(
-                Math.random() *
-                candidateCount
+            this.random.randomInt(
+                0,
+                candidateCount - 1
             )
             ];
     }
@@ -570,3 +580,5 @@ export class BSPGenerator
         }
     }
 }
+
+export default BSPGenerator

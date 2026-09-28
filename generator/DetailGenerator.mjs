@@ -2,6 +2,11 @@ import { DetailTile } from "./DetailTile.mjs";
 
 export class DetailGenerator
 {
+    constructor(random)
+    {
+        this.random = random;
+    }
+
     generate(grid, rooms)
     {
         for(const room of rooms)
@@ -106,9 +111,9 @@ export class DetailGenerator
             return null;
 
         return candidates[
-            Math.floor(
-                Math.random() *
-                candidates.length
+            this.random.randomInt(
+                0,
+                candidates.length - 1
             )
             ];
     }
@@ -136,10 +141,10 @@ export class DetailGenerator
 
     randomInt(min, max)
     {
-        return Math.floor(
-            Math.random() *
-            (max - min + 1)
-        ) + min;
+        return this.random.randomInt(
+            min,
+            max
+        );
     }
 
     generateTreasureRoom(grid, room)
@@ -216,7 +221,8 @@ export class DetailGenerator
 
     generateNormalRoom(grid, room)
     {
-        const roll = Math.random();
+        const roll =
+            this.random.next();
 
         if(roll < 0.20)
         {

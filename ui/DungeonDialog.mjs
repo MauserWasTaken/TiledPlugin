@@ -256,16 +256,23 @@ export function showDungeonDialog(onGenerate)
     dialog.addSeparator("Generation");
 
 
+    const seedValue =
+        Math.floor(
+            Math.random() * 2147483648
+        );
+
     const seed =
         dialog.addNumberInput(
             "Seed:",
-            config.seed
+            0
         );
 
     seed.minimum = 0;
     seed.maximum = 2147483647;
     seed.decimals = 0;
     seed.singleStep = 1;
+
+    seed.value = seedValue;
 
 
     /*

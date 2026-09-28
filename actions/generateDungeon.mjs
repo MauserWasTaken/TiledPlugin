@@ -3,10 +3,12 @@ import { Grid } from "../generator/Grid.mjs";
 import { WallVariantGenerator } from "../generator/WallVariantGenerator.mjs";
 import { BrickGenerator } from "../generator/BrickGenerator.mjs";
 import { RoomWallBuilder } from "../generator/RoomWallBuilder.mjs";
-import { BSPGenerator } from "../generator/BSPGenerator.mjs";
+import BSPGenerator from "../generator/BSPGenerator.mjs";
 import { WallGeometryNormalizer } from "../generator/WallGeometryNormalizer.mjs";
 import { DetailGenerator } from "../generator/DetailGenerator.mjs";
-import { DungeonConfig } from "../generator/DungeonConfig.mjs";
+import { DungeonConfig } from "../generator/DungeonConfig.mjs"
+import {SeededRandom}
+    from "../generator/SeededRandom.mjs";
 
 
 function getOrCreateDetailLayer(map, dungeonLayer)
@@ -71,6 +73,9 @@ function getOrCreateDetailLayer(map, dungeonLayer)
 
 export function generateDungeon(config)
 {
+    const random =
+        new SeededRandom(config.seed);
+
     let map = tiled.activeAsset;
 
     let dungeonLayer =
@@ -126,8 +131,10 @@ export function generateDungeon(config)
      * Generate BSP dungeon
      */
     const bsp =
-        new BSPGenerator(config);
-
+        new BSPGenerator(
+            config,
+            random
+        );
 
     const result =
         bsp.generate(
@@ -237,7 +244,8 @@ export function generateDungeon(config)
      */
     let brickGenerator =
         new BrickGenerator(
-            config
+            config,
+            random
         );
 
 
@@ -250,7 +258,9 @@ export function generateDungeon(config)
      * Generate details
      */
     const detailGenerator =
-        new DetailGenerator();
+        new DetailGenerator(
+            random
+        );
 
 
     detailGenerator.generate(

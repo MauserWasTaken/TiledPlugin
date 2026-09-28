@@ -1,10 +1,10 @@
 export class RoomGenerator
 {
-    constructor(grid)
+    constructor(grid, random)
     {
         this.grid = grid;
+        this.random = random;
     }
-
 
     chooseShape(room)
     {
@@ -50,7 +50,7 @@ export class RoomGenerator
          * 30% CROSS
          */
         const roll =
-            Math.random();
+            this.random.next();
 
 
         if(roll < 0.40)

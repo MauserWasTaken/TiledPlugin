@@ -3,9 +3,10 @@ import {DetailTile} from "./DetailTile.mjs";
 
 export class BrickGenerator
 {
-    constructor(config)
+    constructor(config, random)
     {
         this.config = config;
+        this.random = random;
     }
 
     generate(grid)
@@ -97,7 +98,7 @@ export class BrickGenerator
             this.config.wallDecorationChance / 100;
 
         const roll =
-            Math.random();
+            this.random.next();
 
 
         /*
@@ -128,8 +129,7 @@ export class BrickGenerator
          * decoration pool.
          */
         const decorationRoll =
-            Math.random();
-
+            this.random.next();
 
         if(decorationRoll < 0.25)
         {
