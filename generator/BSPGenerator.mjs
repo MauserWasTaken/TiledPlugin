@@ -15,7 +15,7 @@ class BSPGenerator
         this.random = random;
     }
 
-    generate(grid)
+    generate(grid, stats = null)
     {
         const root = new BSPNode(
             0,
@@ -43,6 +43,13 @@ class BSPGenerator
             rooms
         );
 
+        if(stats)
+        {
+            this.collectRoomStatistics(
+                stats,
+                rooms
+            );
+        }
 
         return {
             root,
@@ -377,7 +384,11 @@ class BSPGenerator
         );
     }
 
-    connectRooms(node, grid)
+    connectRooms(
+        node,
+        grid,
+        stats = null
+    )
     {
         if(node.isLeaf())
             return;
@@ -390,7 +401,8 @@ class BSPGenerator
         {
             this.connectRooms(
                 node.left,
-                grid
+                grid,
+                stats
             );
         }
 
@@ -399,7 +411,8 @@ class BSPGenerator
         {
             this.connectRooms(
                 node.right,
-                grid
+                grid,
+                stats
             );
         }
 
@@ -448,7 +461,8 @@ class BSPGenerator
                     grid,
                     roomA,
                     roomB,
-                    this.config.corridorWidth
+                    this.config.corridorWidth,
+                    stats
                 );
             }
         }
@@ -577,6 +591,53 @@ class BSPGenerator
                 node.right,
                 rooms
             );
+        }
+    }
+
+    collectRoomStatistics(stats, rooms)
+    {
+        stats.roomCount = rooms.length;
+
+        for(const room of rooms)
+        {
+            switch(room.shape)
+            {
+                case "RECTANGLE":
+                    stats.rectangleRooms++;
+                    break;
+
+                case "CIRCLE":
+                    stats.circleRooms++;
+                    break;
+
+                case "CROSS":
+                    stats.crossRooms++;
+                    break;
+            }
+
+
+            switch(room.type)
+            {
+                case "NORMAL":
+                    stats.normalRooms++;
+                    break;
+
+                case "TREASURE":
+                    stats.treasureRooms++;
+                    break;
+
+                case "BLACKSMITH":
+                    stats.blacksmithRooms++;
+                    break;
+
+                case "START":
+                    stats.startRooms++;
+                    break;
+
+                case "EXIT":
+                    stats.exitRooms++;
+                    break;
+            }
         }
     }
 }

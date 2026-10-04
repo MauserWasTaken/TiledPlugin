@@ -26,7 +26,13 @@ export class CorridorGenerator
      * ============================================================
      */
 
-    connect(grid, roomA, roomB, width = 2)
+    connect(
+        grid,
+        roomA,
+        roomB,
+        width = 2,
+        stats = null
+    )
     {
         this.corridorWidth = width;
 
@@ -384,6 +390,13 @@ export class CorridorGenerator
             selected.route
         );
 
+        if(stats)
+        {
+            stats.corridorCount++;
+
+            stats.totalCorridorLength +=
+                selected.length;
+        }
 
         return true;
     }

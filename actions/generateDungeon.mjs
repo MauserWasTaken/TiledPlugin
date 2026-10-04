@@ -7,8 +7,9 @@ import BSPGenerator from "../generator/BSPGenerator.mjs";
 import { WallGeometryNormalizer } from "../generator/WallGeometryNormalizer.mjs";
 import { DetailGenerator } from "../generator/DetailGenerator.mjs";
 import { DungeonConfig } from "../generator/DungeonConfig.mjs"
-import {SeededRandom}
-    from "../generator/SeededRandom.mjs";
+import {SeededRandom} from "../generator/SeededRandom.mjs";
+import { GenerationStats } from "../generator/GenerationStats.mjs";
+import {showGenerationStatsDialog} from "../ui/GenerationStatsDialog.mjs";
 
 
 function getOrCreateDetailLayer(map, dungeonLayer)
@@ -70,13 +71,52 @@ function getOrCreateDetailLayer(map, dungeonLayer)
     return detailLayer;
 }
 
+function countFloorTiles(grid)
+{
+    let count = 0;
+
+    for(let y = 0; y < grid.height; y++)
+    {
+        for(let x = 0; x < grid.width; x++)
+        {
+            if(grid.isFloor(x,y))
+            {
+                count++;
+            }
+        }
+    }
+
+    return count;
+}
+
 
 export function generateDungeon(config)
 {
+    const startTime =
+        Date.now();
+
+    const stats =
+        new GenerationStats();
+
+    stats.seed =
+        config.seed;
+
+    stats.mapWidth =
+        tiled.activeAsset.width;
+
+    stats.mapHeight =
+        tiled.activeAsset.height;
+
     const random =
         new SeededRandom(config.seed);
 
     let map = tiled.activeAsset;
+
+    stats.mapWidth =
+        map.width;
+
+    stats.mapHeight =
+        map.height;
 
     let dungeonLayer =
         map.layers[0];
@@ -138,13 +178,15 @@ export function generateDungeon(config)
 
     const result =
         bsp.generate(
-            grid
+            grid,
+            stats
         );
 
 
     bsp.connectRooms(
         result.root,
-        grid
+        grid,
+        stats
     );
 
 
@@ -328,6 +370,9 @@ export function generateDungeon(config)
                 );
             }
         }
+
+        stats.floorTileCount =
+            countFloorTiles(grid);
     }
 
 
@@ -337,4 +382,13 @@ export function generateDungeon(config)
     dungeonWriter.apply();
 
     detailWriter.apply();
+
+    stats.generationTime =
+        Date.now() - startTime;
+
+    showGenerationStatsDialog(
+        stats
+    );
+
+
 }
