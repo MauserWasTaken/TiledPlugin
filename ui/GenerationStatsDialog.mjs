@@ -1,4 +1,8 @@
-export function showGenerationStatsDialog(stats)
+export function showGenerationStatsDialog(
+    stats,
+    config,
+    onGenerateAgain
+)
 {
     const dialog =
         new Dialog("Generation Complete");
@@ -143,16 +147,70 @@ export function showGenerationStatsDialog(stats)
 
     /*
      * --------------------------------------------------
-     * BUTTON
+     * BUTTONS
      * --------------------------------------------------
      */
 
     dialog.addNewRow();
 
+
+    const generateAgainButton =
+        dialog.addButton(
+            "Generate Again"
+        );
+
+
     const okButton =
         dialog.addButton(
             "OK"
         );
+
+
+    /*
+     * --------------------------------------------------
+     * GENERATE AGAIN
+     * --------------------------------------------------
+     */
+
+    generateAgainButton.clicked.connect(
+        function()
+        {
+            /*
+             * Generate a completely new seed.
+             *
+             * The rest of the configuration
+             * remains unchanged.
+             */
+            config.seed =
+                Math.floor(
+                    Math.random() * 2147483648
+                );
+
+
+            /*
+             * Close the statistics dialog
+             * before starting the next generation.
+             */
+            dialog.accept();
+
+
+            /*
+             * Start generation with the
+             * existing configuration and
+             * the new seed.
+             */
+            onGenerateAgain(
+                config
+            );
+        }
+    );
+
+
+    /*
+     * --------------------------------------------------
+     * OK
+     * --------------------------------------------------
+     */
 
     okButton.clicked.connect(
         function()

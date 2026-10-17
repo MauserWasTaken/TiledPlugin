@@ -321,8 +321,6 @@ export function generateDungeon(config)
         {
             /*
              * DUNGEON LAYER
-             *
-             * Always write floor/wall here.
              */
             if(grid.isFloor(x,y))
             {
@@ -350,9 +348,6 @@ export function generateDungeon(config)
 
             /*
              * DETAILS LAYER
-             *
-             * Only write something when
-             * a detail exists.
              */
             const detail =
                 grid.getDetail(
@@ -370,10 +365,16 @@ export function generateDungeon(config)
                 );
             }
         }
-
-        stats.floorTileCount =
-            countFloorTiles(grid);
     }
+
+
+    /*
+     * Count floor tiles once after
+     * the complete grid has been processed.
+     */
+    stats.floorTileCount =
+        countFloorTiles(grid);
+
 
 
     /*
@@ -386,9 +387,15 @@ export function generateDungeon(config)
     stats.generationTime =
         Date.now() - startTime;
 
+
     showGenerationStatsDialog(
-        stats
+        stats,
+        config,
+        function(newConfig)
+        {
+            generateDungeon(
+                newConfig
+            );
+        }
     );
-
-
 }

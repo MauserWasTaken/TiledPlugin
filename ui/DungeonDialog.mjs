@@ -14,6 +14,35 @@ export function showDungeonDialog(onGenerate)
 
 
     /*
+ * --------------------------------------------------
+ * CONFIGURATION PRESETS
+ * --------------------------------------------------
+ */
+
+    dialog.addHeading("Configuration Preset");
+
+    const preset =
+        dialog.addComboBox(
+            "Preset:",
+            [
+                "Balanced",
+                "More Rooms",
+                "More Variety",
+                "Large Rooms"
+            ],
+            0
+        );
+
+    dialog.addNewRow();
+
+    const applyPresetButton =
+        dialog.addButton(
+            "Apply Preset"
+        );
+
+    dialog.addNewRow();
+
+    /*
      * --------------------------------------------------
      * BSP / ROOMS
      * --------------------------------------------------
@@ -274,6 +303,152 @@ export function showDungeonDialog(onGenerate)
 
     seed.value = seedValue;
 
+    /*
+ * --------------------------------------------------
+ * PRESET VALUES
+ * --------------------------------------------------
+ */
+
+    const presets =
+        {
+            "Balanced":
+                {
+                    minimumPartitionSize: 16,
+                    minimumRoomSize: 8,
+                    roomPadding: 2,
+                    minimumRoomFill: 70,
+                    maximumRoomFill: 95,
+                    maximumRoomAspectRatio: 1.5,
+
+                    rectangleChance: 60,
+                    circleChance: 20,
+                    crossChance: 20,
+
+                    corridorWidth: 2,
+
+                    treasureChance: 20,
+                    blacksmithChance: 20,
+
+                    wallDecorationChance: 25
+                },
+
+            "More Rooms":
+                {
+                    minimumPartitionSize: 14,
+                    minimumRoomSize: 6,
+                    roomPadding: 1,
+                    minimumRoomFill: 55,
+                    maximumRoomFill: 80,
+                    maximumRoomAspectRatio: 1.5,
+
+                    rectangleChance: 60,
+                    circleChance: 20,
+                    crossChance: 20,
+
+                    corridorWidth: 2,
+
+                    treasureChance: 20,
+                    blacksmithChance: 20,
+
+                    wallDecorationChance: 25
+                },
+
+            "More Variety":
+                {
+                    minimumPartitionSize: 16,
+                    minimumRoomSize: 8,
+                    roomPadding: 2,
+                    minimumRoomFill: 60,
+                    maximumRoomFill: 90,
+                    maximumRoomAspectRatio: 1.8,
+
+                    rectangleChance: 40,
+                    circleChance: 30,
+                    crossChance: 30,
+
+                    corridorWidth: 2,
+
+                    treasureChance: 25,
+                    blacksmithChance: 20,
+
+                    wallDecorationChance: 35
+                },
+
+            "Large Rooms":
+                {
+                    minimumPartitionSize: 24,
+                    minimumRoomSize: 12,
+                    roomPadding: 2,
+                    minimumRoomFill: 75,
+                    maximumRoomFill: 95,
+                    maximumRoomAspectRatio: 1.5,
+
+                    rectangleChance: 60,
+                    circleChance: 20,
+                    crossChance: 20,
+
+                    corridorWidth: 2,
+
+                    treasureChance: 20,
+                    blacksmithChance: 20,
+
+                    wallDecorationChance: 25
+                }
+        };
+
+    function applyPreset(configValues)
+    {
+        minimumPartitionSize.value =
+            configValues.minimumPartitionSize;
+
+        minimumRoomSize.value =
+            configValues.minimumRoomSize;
+
+        roomPadding.value =
+            configValues.roomPadding;
+
+        minimumRoomFill.value =
+            configValues.minimumRoomFill;
+
+        maximumRoomFill.value =
+            configValues.maximumRoomFill;
+
+        maximumRoomAspectRatio.value =
+            configValues.maximumRoomAspectRatio;
+
+
+        rectangleChance.value =
+            configValues.rectangleChance;
+
+        circleChance.value =
+            configValues.circleChance;
+
+        crossChance.value =
+            configValues.crossChance;
+
+
+        corridorWidth.value =
+            configValues.corridorWidth;
+
+
+        treasureChance.value =
+            configValues.treasureChance;
+
+        blacksmithChance.value =
+            configValues.blacksmithChance;
+
+
+        wallDecorationChance.value =
+            configValues.wallDecorationChance;
+
+
+        /*
+         * Refresh validation and feedback
+         * after changing the inputs.
+         */
+        validate();
+    }
+
 
     /*
      * --------------------------------------------------
@@ -356,6 +531,24 @@ export function showDungeonDialog(onGenerate)
         return true;
     }
 
+
+    applyPresetButton.clicked.connect(
+        function()
+        {
+            const presetName =
+                preset.currentText;
+
+            const selectedPreset =
+                presets[presetName];
+
+            if(!selectedPreset)
+                return;
+
+            applyPreset(
+                selectedPreset
+            );
+        }
+    );
 
     /*
      * --------------------------------------------------
