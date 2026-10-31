@@ -144,6 +144,38 @@ export function showGenerationStatsDialog(
         " ms"
     );
 
+    dialog.addSeparator("Evaluation");
+
+    dialog.addLabel(
+        "Floor coverage: " +
+        (stats.floorPercentage ?? 0).toFixed(2) +
+        "%"
+    );
+
+    dialog.addNewRow();
+
+    dialog.addLabel(
+        "Connected floor regions: " +
+        (stats.connectedFloorComponents ?? "N/A")
+    );
+
+    dialog.addNewRow();
+
+    dialog.addLabel(
+        "Connectivity: " +
+        (stats.isConnected === undefined
+            ? "NOT CHECKED"
+            : stats.isConnected ? "PASS" : "FAIL")
+    );
+
+    dialog.addNewRow();
+
+    dialog.addLabel(
+        "Geometry validation: " +
+        (stats.geometryValid === undefined
+            ? "NOT CHECKED"
+            : stats.geometryValid ? "PASS" : "FAIL")
+    );
 
     /*
      * --------------------------------------------------

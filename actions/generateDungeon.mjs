@@ -10,6 +10,7 @@ import { DungeonConfig } from "../generator/DungeonConfig.mjs"
 import {SeededRandom} from "../generator/SeededRandom.mjs";
 import { GenerationStats } from "../generator/GenerationStats.mjs";
 import {showGenerationStatsDialog} from "../ui/GenerationStatsDialog.mjs";
+import { DungeonEvaluator } from "../generator/DungeonEvaluator.mjs";
 
 
 function getOrCreateDetailLayer(map, dungeonLayer)
@@ -238,23 +239,30 @@ export function generateDungeon(config)
      * Validate final geometry
      */
     const invalid =
-        normalizer.findInvalidGeometry(
-            grid
-        );
+        normalizer.findInvalidGeometry(grid);
 
+    stats.geometryValid =
+        invalid.length === 0;
 
-    if(invalid.length !== 0)
+    if(!stats.geometryValid)
     {
         tiled.log(
             "[DUNGEON] FINAL WALL VALIDATION FAILED."
         );
 
-        normalizer.logInvalidGeometry(
-            invalid
-        );
+        normalizer.logInvalidGeometry(invalid);
 
         return;
     }
+
+    tiled.log(
+        "[DUNGEON] FINAL WALL VALIDATION PASSED."
+    );
+
+    const evaluator =
+        new DungeonEvaluator();
+
+    evaluator.evaluate(grid, stats);
 
 
     /*

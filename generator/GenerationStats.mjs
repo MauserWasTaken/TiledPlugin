@@ -21,6 +21,26 @@ export class GenerationStats
 
         this.seed = 0;
         this.generationTime = 0;
+
+
+        this.mapWidth = 0;
+        this.mapHeight = 0;
+
+
+
+        this.rectangleRoomCount = 0;
+        this.circleRoomCount = 0;
+        this.crossRoomCount = 0;
+
+        this.floorPercentage = 0;
+
+        this.generationTimeMs = 0;
+
+        this.isConnected = false;
+        this.connectedFloorComponents = 0;
+
+        this.geometryValid = false;
+        this.validationErrors = [];
     }
 
     get averageCorridorLength()
