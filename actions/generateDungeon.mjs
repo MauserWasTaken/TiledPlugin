@@ -190,6 +190,23 @@ export function generateDungeon(config)
         stats
     );
 
+    tiled.log(
+        "[DEBUG] Seed: " + config.seed
+    );
+
+    tiled.log(
+        "[DEBUG] Rooms: " + stats.roomCount
+    );
+
+    tiled.log(
+        "[DEBUG] Corridors: " + stats.corridorCount
+    );
+
+    tiled.log(
+        "[DEBUG] Corridor length: " +
+        stats.totalCorridorLength
+    );
+
 
     tiled.log(
         "[DEBUG] FLOOR MAP BEFORE NORMALIZER"
